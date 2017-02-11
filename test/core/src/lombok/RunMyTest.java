@@ -25,8 +25,9 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 import org.junit.runners.Suite.SuiteClasses;
 
+import lombok.transform.TestWithEcj;
+
 @RunWith(Suite.class)
-@SuiteClasses({lombok.transform.RunTransformSimple.class})
-//, lombok.bytecode.RunBytecodeTests.class, lombok.core.configuration.RunConfigurationTests.class, lombok.core.RunCoreTests.class
-public class RunAllTests {
+@SuiteClasses({lombok.transform.RunTransformTests.class, lombok.bytecode.RunBytecodeTests.class, lombok.core.configuration.RunConfigurationTests.class, lombok.core.RunCoreTests.class})
+public class RunMyTest {
 }
