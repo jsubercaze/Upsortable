@@ -1,7 +1,6 @@
 # Install the environment
 
 * Install [ant](https://ant.apache.org/bindownload.cgi)
-* Instal [ivy](https://ant.apache.org/ivy/download.cgi)
 * Clone the repository
 * Run 'ant dist' to create the lombok.jar
 * Double click the lombok.jar and patch your Eclipse
