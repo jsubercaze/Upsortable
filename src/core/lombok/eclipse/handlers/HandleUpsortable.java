@@ -25,6 +25,7 @@ import static lombok.core.handlers.HandlerUtil.*;
 import static lombok.eclipse.Eclipse.*;
 import static lombok.eclipse.handlers.EclipseHandlerUtil.*;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -45,14 +46,18 @@ import org.eclipse.jdt.internal.compiler.ast.ASTNode;
 import org.eclipse.jdt.internal.compiler.ast.Annotation;
 import org.eclipse.jdt.internal.compiler.ast.Argument;
 import org.eclipse.jdt.internal.compiler.ast.Assignment;
+import org.eclipse.jdt.internal.compiler.ast.EqualExpression;
 import org.eclipse.jdt.internal.compiler.ast.Expression;
 import org.eclipse.jdt.internal.compiler.ast.FieldDeclaration;
+import org.eclipse.jdt.internal.compiler.ast.IfStatement;
 import org.eclipse.jdt.internal.compiler.ast.MethodDeclaration;
 import org.eclipse.jdt.internal.compiler.ast.NameReference;
+import org.eclipse.jdt.internal.compiler.ast.OperatorIds;
 import org.eclipse.jdt.internal.compiler.ast.ReturnStatement;
 import org.eclipse.jdt.internal.compiler.ast.SingleNameReference;
 import org.eclipse.jdt.internal.compiler.ast.Statement;
 import org.eclipse.jdt.internal.compiler.ast.ThisReference;
+import org.eclipse.jdt.internal.compiler.ast.TrueLiteral;
 import org.eclipse.jdt.internal.compiler.ast.TypeDeclaration;
 import org.eclipse.jdt.internal.compiler.ast.TypeReference;
 import org.eclipse.jdt.internal.compiler.classfmt.ClassFileConstants;
@@ -236,19 +241,45 @@ public class HandleUpsortable extends EclipseAnnotationHandler<Upsortable> {
 		Annotation[] nonNulls = findAnnotations(field, NON_NULL_PATTERN);
 		Annotation[] nullables = findAnnotations(field, NULLABLE_PATTERN);
 		List<Statement> statements = new ArrayList<Statement>(5);
-		if (nonNulls.length == 0) {
-			statements.add(assignment);
-		} else {
-			Statement nullCheck = generateNullCheck(field, sourceNode);
-			if (nullCheck != null) statements.add(nullCheck);
-			statements.add(assignment);
-		}
+//		if (nonNulls.length == 0) {
+//			statements.add(assignment);
+//		} else {
+//			Statement nullCheck = generateNullCheck(field, sourceNode);
+//			if (nullCheck != null) statements.add(nullCheck);
+//			statements.add(assignment);
+//		}
+//		
+//		if (shouldReturnThis) {
+//			ThisReference thisRef = new ThisReference(pS, pE);
+//			ReturnStatement returnThis = new ReturnStatement(thisRef, pS, pE);
+//			statements.add(returnThis);
+//		}
 		
-		if (shouldReturnThis) {
-			ThisReference thisRef = new ThisReference(pS, pE);
-			ReturnStatement returnThis = new ReturnStatement(thisRef, pS, pE);
-			statements.add(returnThis);
+		/*
+		 * if (this.$field == $field) return;
+		 */ {
+			 Expression lfRef = createFieldAccessor(fieldNode, FieldAccess.ALWAYS_FIELD, source);
+			setGeneratedBy(lfRef, source);
+			NameReference fRef = new SingleNameReference(field.name, p);
+			setGeneratedBy(lfRef, source);
+			setGeneratedBy(fRef, source);
+			EqualExpression otherEqualsThis = new EqualExpression(lfRef, fRef, OperatorIds.EQUAL_EQUAL);
+			setGeneratedBy(otherEqualsThis, source);
+			
+			TrueLiteral trueLiteral = new TrueLiteral(pS, pE);
+			setGeneratedBy(trueLiteral, source);
+			ReturnStatement returnTrue = new ReturnStatement(null, pS, pE);
+			setGeneratedBy(returnTrue, source);
+			IfStatement ifOtherEqualsThis = new IfStatement(otherEqualsThis, returnTrue, pS, pE);
+			setGeneratedBy(ifOtherEqualsThis, source);
+			statements.add(ifOtherEqualsThis);
 		}
+		 
+		/* Field field = this.getClass().getDeclaredField("$field");*/ 
+		 {char[] fieldName = "field".toCharArray();
+		 
+		 
+		 }
 		method.statements = statements.toArray(new Statement[0]);
 		param.annotations = copyAnnotations(source, nonNulls, nullables, onParam.toArray(new Annotation[0]));
 		
