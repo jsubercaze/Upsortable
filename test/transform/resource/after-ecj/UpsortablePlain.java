@@ -5,10 +5,14 @@ import lombok.Upsortable;
   UpsortablePlain() {
     super();
   }
-  public @java.lang.SuppressWarnings("all") @javax.annotation.Generated("lombok") @lombok.Generated void setI(final int i) {
-    this.i = i;
+  public @java.lang.SuppressWarnings("all") @javax.annotation.Generated("lombok") void setI(final int i) {
+    if ((this.i == i))
+        return ;
+    final java.lang.reflect.Field field = this.getClass().getDeclaredField("i");
   }
-  public @java.lang.SuppressWarnings("all") @javax.annotation.Generated("lombok") @lombok.Generated void setFoo(final int foo) {
-    this.foo = foo;
+  public @java.lang.SuppressWarnings("all") @javax.annotation.Generated("lombok") void setFoo(final int foo) {
+    if ((this.foo == foo))
+        return ;
+    final java.lang.reflect.Field field = this.getClass().getDeclaredField("foo");
   }
 }

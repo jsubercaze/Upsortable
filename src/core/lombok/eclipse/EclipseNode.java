@@ -119,6 +119,9 @@ public class EclipseNode extends lombok.core.LombokNode<EclipseAST, EclipseNode,
 			ast.traverseChildren(visitor, this);
 			visitor.endVisitStatement(this, (Statement) get());
 			break;
+		case IMPORT:
+			
+			break;
 		default:
 			throw new AssertionError("Unexpected kind during node traversal: " + getKind());
 		}

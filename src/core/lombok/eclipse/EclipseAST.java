@@ -50,6 +50,7 @@ import org.eclipse.jdt.internal.compiler.ast.Initializer;
 import org.eclipse.jdt.internal.compiler.ast.LocalDeclaration;
 import org.eclipse.jdt.internal.compiler.ast.Statement;
 import org.eclipse.jdt.internal.compiler.ast.TypeDeclaration;
+import org.eclipse.jdt.internal.core.ImportDeclaration;
 
 /**
  * Wraps around Eclipse's internal AST view to add useful features as well as the ability to visit parents from children,
@@ -345,11 +346,18 @@ public class EclipseAST extends AST<EclipseAST, EclipseNode, ASTNode> {
 			return buildStatement((Statement) node);
 		case ANNOTATION:
 			return buildAnnotation((Annotation) node, false);
+		case IMPORT:
+			return buildImport((ImportReference) node);
 		default:
 			throw new AssertionError("Did not expect to arrive here: " + kind);
 		}
 	}
 	
+	private EclipseNode buildImport(ImportReference node) {
+		List<EclipseNode> children = Collections.emptyList();
+		return putInMap(new EclipseNode(this, node, children, Kind.IMPORT));
+	}
+
 	private EclipseNode buildCompilationUnit(CompilationUnitDeclaration top) {
 		if (setAndGetAsHandled(top)) return null;
 		List<EclipseNode> children = buildTypes(top.types);

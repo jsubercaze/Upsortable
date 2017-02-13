@@ -35,14 +35,15 @@ import lombok.experimental.var;
 import org.eclipse.jdt.internal.compiler.ast.ArrayInitializer;
 import org.eclipse.jdt.internal.compiler.ast.ForStatement;
 import org.eclipse.jdt.internal.compiler.ast.ForeachStatement;
+import org.eclipse.jdt.internal.compiler.ast.ImportReference;
 import org.eclipse.jdt.internal.compiler.ast.LocalDeclaration;
 import org.eclipse.jdt.internal.compiler.ast.NullLiteral;
 import org.eclipse.jdt.internal.compiler.ast.TypeReference;
 import org.mangosdk.spi.ProviderFor;
 
-/*
+/**
  * This class just handles 3 basic error cases. The real meat of eclipse 'val' support is in {@code PatchVal} and {@code PatchValEclipse}.
- */
+ **/
 @ProviderFor(EclipseASTVisitor.class)
 @DeferUntilPostDiet
 @HandlerPriority(65536) // 2^16; resolution needs to work, so if the RHS expression is i.e. a call to a generated getter, we have to run after that getter has been generated.
@@ -88,5 +89,15 @@ public class HandleVal extends EclipseASTAdapter {
 			localNode.addError("variable initializer is 'null'");
 			return;
 		}
+	}
+
+	@Override public void visitImport(EclipseNode importNode, ImportReference importRef) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override public void endVisitImport(EclipseNode importNode, ImportReference importRef) {
+		// TODO Auto-generated method stub
+		
 	}
 }

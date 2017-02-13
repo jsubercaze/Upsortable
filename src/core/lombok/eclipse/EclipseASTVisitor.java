@@ -33,6 +33,7 @@ import org.eclipse.jdt.internal.compiler.ast.Block;
 import org.eclipse.jdt.internal.compiler.ast.CompilationUnitDeclaration;
 import org.eclipse.jdt.internal.compiler.ast.ConstructorDeclaration;
 import org.eclipse.jdt.internal.compiler.ast.FieldDeclaration;
+import org.eclipse.jdt.internal.compiler.ast.ImportReference;
 import org.eclipse.jdt.internal.compiler.ast.Initializer;
 import org.eclipse.jdt.internal.compiler.ast.LocalDeclaration;
 import org.eclipse.jdt.internal.compiler.ast.Statement;
@@ -104,6 +105,9 @@ public interface EclipseASTVisitor {
 	void visitStatement(EclipseNode statementNode, Statement statement);
 	void endVisitStatement(EclipseNode statementNode, Statement statement);
 	
+	
+	void visitImport(EclipseNode importNode, ImportReference importRef);
+	void endVisitImport(EclipseNode importNode, ImportReference importRef);
 	/**
 	 * Prints the structure of an AST.
 	 */
@@ -324,6 +328,16 @@ public interface EclipseASTVisitor {
 			int start = node.get().sourceStart();
 			int end = node.get().sourceEnd();
 			return String.format(" [%d, %d]", start, end);
+		}
+
+		@Override public void visitImport(EclipseNode importNode, ImportReference importRef) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override public void endVisitImport(EclipseNode importNode, ImportReference importRef) {
+			// TODO Auto-generated method stub
+			
 		}
 	}
 }

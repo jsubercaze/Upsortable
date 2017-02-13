@@ -6,8 +6,9 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 import lombok.Setter.AnyAnnotation;
+import lombok.core.PrintAST;
 
-@Target(ElementType.TYPE) @Retention(RetentionPolicy.SOURCE) public @interface Upsortable {
+@PrintAST @Target(ElementType.TYPE) @Retention(RetentionPolicy.SOURCE) public @interface Upsortable {
 	/**
 	 * If you want your setter to be non-public, you can specify an alternate
 	 * access level here.

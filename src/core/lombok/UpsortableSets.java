@@ -1,4 +1,4 @@
-package lombok.upsortable;
+package lombok;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;

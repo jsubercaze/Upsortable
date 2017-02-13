@@ -42,6 +42,7 @@ import lombok.experimental.PackagePrivate;
 import org.eclipse.jdt.internal.compiler.ast.ASTNode;
 import org.eclipse.jdt.internal.compiler.ast.Annotation;
 import org.eclipse.jdt.internal.compiler.ast.FieldDeclaration;
+import org.eclipse.jdt.internal.compiler.ast.ImportReference;
 import org.eclipse.jdt.internal.compiler.ast.QualifiedTypeReference;
 import org.eclipse.jdt.internal.compiler.ast.SingleTypeReference;
 import org.eclipse.jdt.internal.compiler.ast.TypeDeclaration;
@@ -170,5 +171,15 @@ public class HandleFieldDefaults extends EclipseASTAdapter {
 		boolean fdToFinal = (fieldDefaults != null && makeFinalIsExplicit) ? fd.makeFinal() : defaultToFinal;
 		
 		generateFieldDefaultsForType(typeNode, source, fdAccessLevel, fdToFinal, false);
+	}
+
+	@Override public void visitImport(EclipseNode importNode, ImportReference importRef) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override public void endVisitImport(EclipseNode importNode, ImportReference importRef) {
+		// TODO Auto-generated method stub
+		
 	}
 }

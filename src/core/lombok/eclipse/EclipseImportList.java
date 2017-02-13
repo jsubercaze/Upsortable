@@ -141,4 +141,14 @@ public class EclipseImportList implements ImportList {
 		if (pkg == null || pkg.tokens == null || pkg.tokens.length == 0) return unqualified;
 		return toQualifiedName(pkg.tokens) + "." + unqualified;
 	}
+
+	public ImportReference[] getImports() {
+		return imports;
+	}
+
+	public void setImports(ImportReference[] imports) {
+		this.imports = imports;
+	}
+	
+	
 }

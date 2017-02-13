@@ -34,6 +34,7 @@ import org.eclipse.jdt.internal.compiler.ast.Annotation;
 import org.eclipse.jdt.internal.compiler.ast.Argument;
 import org.eclipse.jdt.internal.compiler.ast.CompilationUnitDeclaration;
 import org.eclipse.jdt.internal.compiler.ast.FieldDeclaration;
+import org.eclipse.jdt.internal.compiler.ast.ImportReference;
 import org.eclipse.jdt.internal.compiler.ast.LocalDeclaration;
 import org.eclipse.jdt.internal.compiler.ast.TypeDeclaration;
 import org.eclipse.jdt.internal.compiler.parser.Parser;
@@ -218,6 +219,16 @@ public class TransformEclipseAST {
 		@Override public void visitAnnotationOnType(TypeDeclaration type, EclipseNode annotationNode, Annotation annotation) {
 			CompilationUnitDeclaration top = (CompilationUnitDeclaration) annotationNode.top().get();
 			handlers.handleAnnotation(top, annotationNode, annotation, priority);
+		}
+
+		@Override public void visitImport(EclipseNode importNode, ImportReference importRef) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override public void endVisitImport(EclipseNode importNode, ImportReference importRef) {
+			// TODO Auto-generated method stub
+			
 		}
 	}
 }

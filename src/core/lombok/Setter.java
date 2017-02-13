@@ -26,6 +26,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import lombok.core.PrintAST;
+
 /**
  * Put on any field to make lombok build a standard setter.
  * <p>
@@ -51,6 +53,7 @@ import java.lang.annotation.Target;
  * a {@code Setter} annotation have the annotation.
  */
 @Target({ElementType.FIELD, ElementType.TYPE})
+@PrintAST
 @Retention(RetentionPolicy.SOURCE)
 public @interface Setter {
 	/**
