@@ -1,9 +1,9 @@
 # Install the environment
 
 * Install [ant](https://ant.apache.org/bindownload.cgi)
-* Instal [ivy](https://ant.apache.org/ivy/download.cgi)
 * Clone the repository
 * Run 'ant dist' to create the lombok.jar
+* 'ant setupJavaOracle8TestEnvironment'
 * Double click the lombok.jar and patch your Eclipse
 * Run 'ant eclipse' to prepare the project
 * Import the project into Eclipse
