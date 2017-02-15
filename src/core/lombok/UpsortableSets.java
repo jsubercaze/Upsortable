@@ -29,34 +29,36 @@ import javassist.bytecode.InstructionPrinter;
  * @author Julien Subercaze
  *
  */
-@SuppressWarnings("rawtypes")
-public class UpsortableSets {
-
+@SuppressWarnings("rawtypes") public class UpsortableSets {
+	
 	/**
 	 * Static counter to number the sets
 	 */
 	static final AtomicInteger counter = new AtomicInteger();
-
+	
 	/**
 	 * Global structure that stores the mapping between
 	 * <code> Class -> Fields -> Sets where they take part into comparator</code>
 	 */
-
+	
 	public final static Map<String, Set<UpsortableSet>> GLOBAL_UPSORTABLE = new HashMap<String, Set<UpsortableSet>>();
-
+	
 	public static <E extends UpsortableValue> UpsortableSet<E> newUpsortableTreeSet(Comparator<? super E> comparator) {
 		return new UpsortableTreeSet<E>(comparator);
 	}
-
-	public static <E extends UpsortableValue> UpsortableSet<E> newConcurrentSkipListSet(
-			Comparator<? super E> comparator) {
+	
+	public static <E extends UpsortableValue> UpsortableSet<E> newConcurrentSkipListSet(Comparator<? super E> comparator) {
 		return new UpsortableConcurrentSkipListSet<E>(comparator);
 	}
-
+	
+	public static Map<String, Set<UpsortableSet>> getGlobalUpsortable() {
+		return GLOBAL_UPSORTABLE;
+	}
+	
 	static synchronized void init(Comparator<?> comparator, UpsortableSet<?> upsortableSet) {
-
+		
 		try {
-
+			
 			Type genericSuperclass = comparator.getClass().getGenericInterfaces()[0];
 			upsortableSet.setEntryType(((Class) ((ParameterizedType) genericSuperclass).getActualTypeArguments()[0]));
 		} catch (Exception e) {
@@ -94,7 +96,7 @@ public class UpsortableSets {
 						set = Collections.synchronizedSet(set);
 						set.add(upsortableSet);
 						GLOBAL_UPSORTABLE.put(val, set);
-
+						
 					}
 				}
 			}
@@ -102,9 +104,8 @@ public class UpsortableSets {
 			e.printStackTrace();
 		}
 	}
-
-	static class UpsortableConcurrentSkipListSet<E extends UpsortableValue> extends ConcurrentSkipListSet<E>
-			implements UpsortableSet<E> {
+	
+	static class UpsortableConcurrentSkipListSet<E extends UpsortableValue> extends ConcurrentSkipListSet<E> implements UpsortableSet<E> {
 		/**
 		 * Type of entries in this set
 		 */
@@ -113,48 +114,42 @@ public class UpsortableSets {
 		 * For hashcode and equals
 		 */
 		int number = counter.incrementAndGet();
-
+		
 		private static final long serialVersionUID = 787720712778371596L;
-
+		
 		public UpsortableConcurrentSkipListSet(Comparator<? super E> comparator) {
 			super(comparator);
 			// Update the global structure
 			init(comparator, this);
-
+			
 		}
-
-		@Override
-		public int hashCode() {
+		
+		@Override public int hashCode() {
 			final int prime = 31;
 			int result = super.hashCode();
 			result = prime * result + number;
 			return result;
 		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (this == obj)
-				return true;
-			if (!super.equals(obj))
-				return false;
-			if (getClass() != obj.getClass())
-				return false;
+		
+		@Override public boolean equals(Object obj) {
+			if (this == obj) return true;
+			if (!super.equals(obj)) return false;
+			if (getClass() != obj.getClass()) return false;
 			UpsortableTreeSet other = (UpsortableTreeSet) obj;
-			if (number != other.number)
-				return false;
+			if (number != other.number) return false;
 			return true;
 		}
-
+		
 		public Class getEntryType() {
 			return entryType;
 		}
-
+		
 		public void setEntryType(Class entryType) {
 			this.entryType = entryType;
 		}
-
+		
 	}
-
+	
 	static class UpsortableTreeSet<E extends UpsortableValue> extends TreeSet<E> implements UpsortableSet<E> {
 		/**
 		 * Type of entries in this set
@@ -164,45 +159,39 @@ public class UpsortableSets {
 		 * For hashcode and equals
 		 */
 		int number = counter.incrementAndGet();
-
+		
 		private static final long serialVersionUID = 7877207082764371596L;
-
+		
 		public UpsortableTreeSet(Comparator<? super E> comparator) {
 			super(comparator);
 			// Update the global structure
 			init(comparator, this);
-
+			
 		}
-
-		@Override
-		public int hashCode() {
+		
+		@Override public int hashCode() {
 			final int prime = 31;
 			int result = super.hashCode();
 			result = prime * result + number;
 			return result;
 		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (this == obj)
-				return true;
-			if (!super.equals(obj))
-				return false;
-			if (getClass() != obj.getClass())
-				return false;
+		
+		@Override public boolean equals(Object obj) {
+			if (this == obj) return true;
+			if (!super.equals(obj)) return false;
+			if (getClass() != obj.getClass()) return false;
 			UpsortableTreeSet other = (UpsortableTreeSet) obj;
-			if (number != other.number)
-				return false;
+			if (number != other.number) return false;
 			return true;
 		}
-
+		
 		public Class getEntryType() {
 			return entryType;
 		}
-
+		
 		public void setEntryType(Class entryType) {
 			this.entryType = entryType;
 		}
-
+		
 	}
 }

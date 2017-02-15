@@ -24,6 +24,8 @@ package lombok.eclipse.handlers;
 import static lombok.core.handlers.HandlerUtil.*;
 import static lombok.eclipse.Eclipse.*;
 import static lombok.eclipse.handlers.EclipseHandlerUtil.*;
+import static lombok.eclipse.handlers.EclipseHandlerUtil.toAllSetterNames;
+import static lombok.eclipse.handlers.EclipseHandlerUtil.toSetterName;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -31,6 +33,36 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+
+import org.eclipse.jdt.internal.compiler.ast.ASTNode;
+import org.eclipse.jdt.internal.compiler.ast.Annotation;
+import org.eclipse.jdt.internal.compiler.ast.Argument;
+import org.eclipse.jdt.internal.compiler.ast.Assignment;
+import org.eclipse.jdt.internal.compiler.ast.EqualExpression;
+import org.eclipse.jdt.internal.compiler.ast.Expression;
+import org.eclipse.jdt.internal.compiler.ast.FieldDeclaration;
+import org.eclipse.jdt.internal.compiler.ast.FieldReference;
+import org.eclipse.jdt.internal.compiler.ast.IfStatement;
+import org.eclipse.jdt.internal.compiler.ast.ImportReference;
+import org.eclipse.jdt.internal.compiler.ast.LocalDeclaration;
+import org.eclipse.jdt.internal.compiler.ast.MessageSend;
+import org.eclipse.jdt.internal.compiler.ast.MethodDeclaration;
+import org.eclipse.jdt.internal.compiler.ast.NameReference;
+import org.eclipse.jdt.internal.compiler.ast.OperatorIds;
+import org.eclipse.jdt.internal.compiler.ast.ParameterizedSingleTypeReference;
+import org.eclipse.jdt.internal.compiler.ast.ReturnStatement;
+import org.eclipse.jdt.internal.compiler.ast.SingleNameReference;
+import org.eclipse.jdt.internal.compiler.ast.SingleTypeReference;
+import org.eclipse.jdt.internal.compiler.ast.Statement;
+import org.eclipse.jdt.internal.compiler.ast.StringLiteral;
+import org.eclipse.jdt.internal.compiler.ast.ThisReference;
+import org.eclipse.jdt.internal.compiler.ast.TrueLiteral;
+import org.eclipse.jdt.internal.compiler.ast.TypeDeclaration;
+import org.eclipse.jdt.internal.compiler.ast.TypeReference;
+import org.eclipse.jdt.internal.compiler.classfmt.ClassFileConstants;
+import org.eclipse.jdt.internal.compiler.lookup.TypeIds;
+import org.mangosdk.spi.ProviderFor;
 
 import lombok.AccessLevel;
 import lombok.ConfigurationKeys;
@@ -41,29 +73,6 @@ import lombok.core.AnnotationValues;
 import lombok.eclipse.EclipseAnnotationHandler;
 import lombok.eclipse.EclipseNode;
 import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
-
-import org.eclipse.jdt.internal.compiler.ast.ASTNode;
-import org.eclipse.jdt.internal.compiler.ast.Annotation;
-import org.eclipse.jdt.internal.compiler.ast.Argument;
-import org.eclipse.jdt.internal.compiler.ast.Assignment;
-import org.eclipse.jdt.internal.compiler.ast.EqualExpression;
-import org.eclipse.jdt.internal.compiler.ast.Expression;
-import org.eclipse.jdt.internal.compiler.ast.FieldDeclaration;
-import org.eclipse.jdt.internal.compiler.ast.IfStatement;
-import org.eclipse.jdt.internal.compiler.ast.ImportReference;
-import org.eclipse.jdt.internal.compiler.ast.MethodDeclaration;
-import org.eclipse.jdt.internal.compiler.ast.NameReference;
-import org.eclipse.jdt.internal.compiler.ast.OperatorIds;
-import org.eclipse.jdt.internal.compiler.ast.ReturnStatement;
-import org.eclipse.jdt.internal.compiler.ast.SingleNameReference;
-import org.eclipse.jdt.internal.compiler.ast.Statement;
-import org.eclipse.jdt.internal.compiler.ast.ThisReference;
-import org.eclipse.jdt.internal.compiler.ast.TrueLiteral;
-import org.eclipse.jdt.internal.compiler.ast.TypeDeclaration;
-import org.eclipse.jdt.internal.compiler.ast.TypeReference;
-import org.eclipse.jdt.internal.compiler.classfmt.ClassFileConstants;
-import org.eclipse.jdt.internal.compiler.lookup.TypeIds;
-import org.mangosdk.spi.ProviderFor;
 
 /**
  * Handles the {@code lombok.Setter} annotation for eclipse.
@@ -157,7 +166,7 @@ import org.mangosdk.spi.ProviderFor;
 		int pS = source.sourceStart, pE = source.sourceEnd;
 		long p = (long) pS << 32 | pE;
 		char[][] importToToken = importToToken("java.util.Set");
-		ImportReference setRef = new ImportReference(importToToken, new long[]{pS,pE}, false, 0);
+		ImportReference setRef = new ImportReference(importToToken, new long[] {pS, pE}, false, 0);
 		int a = 2;
 		injectImport(topNode, setRef);
 	}
@@ -265,19 +274,6 @@ import org.mangosdk.spi.ProviderFor;
 		Annotation[] nonNulls = findAnnotations(field, NON_NULL_PATTERN);
 		Annotation[] nullables = findAnnotations(field, NULLABLE_PATTERN);
 		List<Statement> statements = new ArrayList<Statement>(5);
-		// if (nonNulls.length == 0) {
-		// statements.add(assignment);
-		// } else {
-		// Statement nullCheck = generateNullCheck(field, sourceNode);
-		// if (nullCheck != null) statements.add(nullCheck);
-		// statements.add(assignment);
-		// }
-		//
-		// if (shouldReturnThis) {
-		// ThisReference thisRef = new ThisReference(pS, pE);
-		// ReturnStatement returnThis = new ReturnStatement(thisRef, pS, pE);
-		// statements.add(returnThis);
-		// }
 		
 		/*
 		 * if (this.$field == $field) return;
@@ -299,15 +295,93 @@ import org.mangosdk.spi.ProviderFor;
 			statements.add(ifOtherEqualsThis);
 		}
 		
-		/* Field field = this.getClass().getDeclaredField("$field"); */
+		/*
+		 * Create the statements within the try/catch block
+		 */
+		
+		/*
+		 * String fname = this.getClass().getDeclaredField("$field").getName();
+		 */
 		{
-			char[] fieldName = "field".toCharArray();
-			
+			// Left side
+			LocalDeclaration fieldClass = new LocalDeclaration("fname".toCharArray(), pS, pE);
+			fieldClass.modifiers |= Modifier.FINAL;
+			fieldClass.type = new SingleTypeReference("String".toCharArray(), p);
+			setGeneratedBy(fieldClass, source);
+			// Right side - first call
+			MessageSend getClass = new MessageSend();
+			getClass.sourceStart = pS;
+			getClass.sourceEnd = pE;
+			setGeneratedBy(getClass, source);
+			ThisReference thisReference = new ThisReference(pS, pE);
+			setGeneratedBy(thisReference, source);
+			getClass.receiver = thisReference;
+			getClass.selector = "getClass".toCharArray();
+			// Right side - second call
+			MessageSend getDeclaredField = new MessageSend();
+			getDeclaredField.sourceStart = pS;
+			getDeclaredField.sourceEnd = pE;
+			setGeneratedBy(getDeclaredField, source);
+			getDeclaredField.receiver = getClass;
+			getDeclaredField.selector = "getDeclaredField".toCharArray();
+			// Arguments of the call
+			getDeclaredField.arguments = new Expression[] {new StringLiteral(field.name, pS, pE, 0)};
+			// Third call
+			MessageSend getName = new MessageSend();
+			getName.sourceStart = pS;
+			getName.sourceEnd = pE;
+			setGeneratedBy(getName, source);
+			getName.receiver = getDeclaredField;
+			getName.selector = "getName".toCharArray();
+			// Assign right to left
+			fieldClass.initialization = getName;
+			// Do not add this goes into try catch statement
+			// statements.add(fieldClass);
 		}
+		//
+		//
+		/*
+		 * Set<UpsortableSet> set = UpsortableSets.getGlobalUpsortable()
+		 * .get(this.getClass().getName() + "." + field.getName());
+		 */
+		{
+			// Left side
+			ParameterizedSingleTypeReference pstr = new ParameterizedSingleTypeReference("Set".toCharArray(), new TypeReference[] {new SingleTypeReference("UpsortableSet".toCharArray(), p)}, 0, p);
+			LocalDeclaration fieldClass = new LocalDeclaration("sets".toCharArray(), pS, pE);
+			fieldClass.modifiers |= Modifier.FINAL;
+			fieldClass.type = pstr;
+			// Right side
+			
+			// Assign
+			// fieldClass.initialization = rightside;
+		}
+		
 		method.statements = statements.toArray(new Statement[0]);
 		param.annotations = copyAnnotations(source, nonNulls, nullables, onParam.toArray(new Annotation[0]));
 		
 		method.traverse(new SetGeneratedByVisitor(source), parent.scope);
 		return method;
 	}
+	
+	/**
+	 * // Fail fast if (this.date == newDate) { return; } // Get the list of
+	 * registered set try {
+	 * 
+	 * //final java.lang.reflect.Field field =
+	 * this.getClass().getDeclaredField("i"); Field field =
+	 * this.getClass().getDeclaredField("date");
+	 * 
+	 * 
+	 * Set<UpsortableSet> set = UpsortableSets.getGlobalUpsortable()
+	 * .get(this.getClass().getName() + "." + field.getName());
+	 * 
+	 * UpsortableSet[] participatingSets = new UpsortableSet[set.size()]; int
+	 * found = 0; for (UpsortableSet<?> upsortableSet : set) { if
+	 * (upsortableSet.remove(this)) { participatingSets[found++] =
+	 * upsortableSet; } } // Update value this.date = newDate; // Add in the
+	 * sets the element is participating for (int i = 0; i < found; i++) {
+	 * participatingSets[i].add(this); } } catch (Exception e) {
+	 * e.printStackTrace(); }
+	 */
+	
 }
