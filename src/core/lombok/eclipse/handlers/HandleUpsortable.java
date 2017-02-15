@@ -34,9 +34,11 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+import org.eclipse.jdt.core.dom.InfixExpression;
 import org.eclipse.jdt.internal.compiler.ast.ASTNode;
 import org.eclipse.jdt.internal.compiler.ast.Annotation;
 import org.eclipse.jdt.internal.compiler.ast.Argument;
+import org.eclipse.jdt.internal.compiler.ast.ArrayReference;
 import org.eclipse.jdt.internal.compiler.ast.Assignment;
 import org.eclipse.jdt.internal.compiler.ast.Block;
 import org.eclipse.jdt.internal.compiler.ast.BinaryExpression;
@@ -52,6 +54,7 @@ import org.eclipse.jdt.internal.compiler.ast.MethodDeclaration;
 import org.eclipse.jdt.internal.compiler.ast.NameReference;
 import org.eclipse.jdt.internal.compiler.ast.OperatorIds;
 import org.eclipse.jdt.internal.compiler.ast.ParameterizedSingleTypeReference;
+import org.eclipse.jdt.internal.compiler.ast.PostfixExpression;
 import org.eclipse.jdt.internal.compiler.ast.ReturnStatement;
 import org.eclipse.jdt.internal.compiler.ast.SingleNameReference;
 import org.eclipse.jdt.internal.compiler.ast.SingleTypeReference;
@@ -62,6 +65,7 @@ import org.eclipse.jdt.internal.compiler.ast.TrueLiteral;
 import org.eclipse.jdt.internal.compiler.ast.TryStatement;
 import org.eclipse.jdt.internal.compiler.ast.TypeDeclaration;
 import org.eclipse.jdt.internal.compiler.ast.TypeReference;
+import org.eclipse.jdt.internal.compiler.ast.UnaryExpression;
 import org.eclipse.jdt.internal.compiler.classfmt.ClassFileConstants;
 import org.eclipse.jdt.internal.compiler.lookup.TypeIds;
 import org.mangosdk.spi.ProviderFor;
@@ -418,7 +422,7 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 			theSet.type = pstr;
 			
 			theSet.initialization = lastGet;
-			System.out.println("hello");
+			
 		}
 		
 		/*
@@ -452,6 +456,7 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 		
 		/*
 		 * if(upsortableSet.remove(this))
+		 *    participatingSets[found++] = upsortableSet;
 		 */
 		IfStatement ifstmt;
 		{
@@ -462,8 +467,16 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 			remove.receiver= new SingleNameReference("upsortableSet".toCharArray(), p);
 			remove.selector = "get".toCharArray();
 			remove.arguments = new Expression[] {new ThisReference(pS, pE)};
+			//Array ref
+			SingleNameReference expression = new SingleNameReference("found".toCharArray(), p);
+			UnaryExpression iPlusPlus = new UnaryExpression(expression, OperatorIds.MINUS_MINUS);
+			SingleNameReference arrayRef = new SingleNameReference("participatingSets".toCharArray(), p);
+			ArrayReference arrayReference = new ArrayReference(arrayRef, iPlusPlus);
+			arrayReference.receiver =  new SingleNameReference("upsortableSet".toCharArray(), p);
+			
 			//If
-			ifstmt = new IfStatement(remove, found, pS, pE); //FIXME replace found by 'participating[....
+			ifstmt = new IfStatement(remove, arrayReference, pS, pE); //FIXME replace found by 'participating[....
+			
 			foreach.action=ifstmt;
 		}
 		
