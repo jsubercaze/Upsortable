@@ -414,6 +414,18 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 			System.out.println("hello");
 		}
 		
+		/*
+		 * int found =0;
+		 */
+		LocalDeclaration found = new LocalDeclaration("found".toCharArray(), pS, pE);
+		{
+			found.sourceStart = pS;
+			found.sourceEnd = pE;
+			TypeReference baseTypeReference = TypeReference.baseTypeReference(TypeIds.T_int, 0);
+			found.type=baseTypeReference;
+			found.initialization=makeIntLiteral("0".toCharArray(), source);
+		}
+		
 		TryStatement tryStatement = new TryStatement();
 		setGeneratedBy(tryStatement, source);
 		tryStatement.tryBlock = new Block(0);
@@ -430,7 +442,7 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 		block.sourceEnd = pE;
 		setGeneratedBy(block, source);
 		block.statements = new Statement[] {};
-		tryStatement.tryBlock.statements = new Statement[]{fieldClass,theSet};
+		tryStatement.tryBlock.statements = new Statement[]{fieldClass,theSet,found};
 		tryStatement.catchBlocks = new Block[] {block};
 		statements.add(tryStatement);
 		
