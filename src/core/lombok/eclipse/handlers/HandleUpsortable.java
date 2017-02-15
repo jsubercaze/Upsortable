@@ -37,6 +37,7 @@ import org.eclipse.jdt.internal.compiler.ast.ASTNode;
 import org.eclipse.jdt.internal.compiler.ast.Annotation;
 import org.eclipse.jdt.internal.compiler.ast.Argument;
 import org.eclipse.jdt.internal.compiler.ast.Assignment;
+import org.eclipse.jdt.internal.compiler.ast.BinaryExpression;
 import org.eclipse.jdt.internal.compiler.ast.EqualExpression;
 import org.eclipse.jdt.internal.compiler.ast.Expression;
 import org.eclipse.jdt.internal.compiler.ast.FieldDeclaration;
@@ -338,35 +339,81 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 		
 		// @formatter:off
 		/*
-		 * Set<UpsortableSet> set = UpsortableSets.getGlobalUpsortable().get(this.getClass().getName() + "." + field.getName());
+		 * Set<UpsortableSet> set = UpsortableSets.getGlobalUpsortable().get(this.getClass().getName() + "." + fname);
 		 */
 		{
-		// Right side - first call
-		MessageSend getClass = new MessageSend();
-		getClass.sourceStart = pS;
-		getClass.sourceEnd = pE;
-		setGeneratedBy(getClass, source);
-		ThisReference thisReference = new ThisReference(pS, pE);
-		setGeneratedBy(thisReference, source);
-		getClass.receiver = thisReference;
-		getClass.selector = "getClass".toCharArray();
-		// Right side - second call
-		MessageSend getName = new MessageSend();
-		getName.sourceStart = pS;
-		getName.sourceEnd = pE;
-		setGeneratedBy(getName, source);
-		getName.receiver = getClass;
-		getName.selector = "getName".toCharArray();
+			
+			/****** this.getClass().getName() ****/
+			// Right side - first call
+			MessageSend getClass = new MessageSend();
+			getClass.sourceStart = pS;
+			getClass.sourceEnd = pE;
+			setGeneratedBy(getClass, source);
+			ThisReference thisReference = new ThisReference(pS, pE);
+			setGeneratedBy(thisReference, source);
+			getClass.receiver = thisReference;
+			getClass.selector = "getClass".toCharArray();
+			// Right side - second call
+			MessageSend getName = new MessageSend();
+			getName.sourceStart = pS;
+			getName.sourceEnd = pE;
+			setGeneratedBy(getName, source);
+			getName.receiver = getClass;
+			getName.selector = "getName".toCharArray();
+			/****** END this.getClass().getName() ****/
+			
+			
+			/****** field.getName() *****/
+			char[] fnameVariableName = "fname".toCharArray();
+			SingleNameReference fnameReference = new SingleNameReference(fnameVariableName, p);
+			setGeneratedBy(fnameReference, source);
+			/****** END field.getName() ****/
+		
+			/****** this.getClass().getName() + "." + field.getName()) ******/
+			final int PLUS = OperatorIds.PLUS;
+			char[] concat = ".".toCharArray();
+			Expression current = new StringLiteral(concat, pS, pE, 0);
+			
+			current = new BinaryExpression(getName, current, PLUS);
+			setGeneratedBy(current, source);			
+			current = new BinaryExpression(current, fnameReference,PLUS);
+			setGeneratedBy(current, source);			
+			/****** END this.getClass().getName() + "." + field.getName()) ******/
+		
+			
+			/****** UpsortableSets.getGlobalUpsortable().get( ******/
+			NameReference upsortableSetsClass = HandleToString.generateQualifiedNameRef(source, "lombok".toCharArray(), "UpsortableSets".toCharArray());
+
+			// UpsortableSets.getGlobalUpsortable()
+			MessageSend getGlobalUpsortable = new MessageSend();
+			getGlobalUpsortable.sourceStart = pS;
+			getGlobalUpsortable.sourceEnd = pE;
+			setGeneratedBy(getGlobalUpsortable, source);
+			getGlobalUpsortable.receiver = upsortableSetsClass;
+			getGlobalUpsortable.selector = "getGlobalUpsortable".toCharArray();
+			
+			MessageSend lastGet = new MessageSend();
+			lastGet.sourceStart = pS;
+			lastGet.sourceEnd = pE;
+			setGeneratedBy(lastGet, source);
+			lastGet.receiver = getGlobalUpsortable;
+			lastGet.selector = "get".toCharArray();
+			lastGet.arguments = new Expression[] {current};
+			/****** END UpsortableSets.getGlobalUpsortable().get()******/
+			
+			// Left side
+			ParameterizedSingleTypeReference pstr = new ParameterizedSingleTypeReference("Set".toCharArray(), new TypeReference[] {new SingleTypeReference("UpsortableSet".toCharArray(), p)}, 0, p);
+			LocalDeclaration theSet = new LocalDeclaration("set".toCharArray(), pS, pE);
+			theSet.modifiers |= Modifier.FINAL;
+			theSet.type = pstr;
+			
+			theSet.initialization = lastGet;
+			System.out.println("hello");
 		}
 		
 		
 		// @formatter:on
 		{
-			// Left side
-			ParameterizedSingleTypeReference pstr = new ParameterizedSingleTypeReference("Set".toCharArray(), new TypeReference[] {new SingleTypeReference("UpsortableSet".toCharArray(), p)}, 0, p);
-			LocalDeclaration fieldClass = new LocalDeclaration("set".toCharArray(), pS, pE);
-			fieldClass.modifiers |= Modifier.FINAL;
-			fieldClass.type = pstr;
 			
 			// Right side
 			
@@ -389,7 +436,7 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 	 * 
 	 * 		final String fname = this.getClass().getDeclaredField("foo").getName(); DONE
 	 * 
-	 * 		Set<UpsortableSet> set = UpsortableSets.getGlobalUpsortable().get(this.getClass().getName() + "." + fname);
+	 * 		Set<UpsortableSet> set = UpsortableSets.getGlobalUpsortable().get(this.getClass().getName() + "." + fname); DONE
 	 * 
 	 * 		UpsortableSet[] participatingSets = new UpsortableSet[set.size()];
 	 * 
