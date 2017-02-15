@@ -38,6 +38,7 @@ import org.eclipse.jdt.internal.compiler.ast.Annotation;
 import org.eclipse.jdt.internal.compiler.ast.Argument;
 import org.eclipse.jdt.internal.compiler.ast.Assignment;
 import org.eclipse.jdt.internal.compiler.ast.Block;
+import org.eclipse.jdt.internal.compiler.ast.BinaryExpression;
 import org.eclipse.jdt.internal.compiler.ast.EqualExpression;
 import org.eclipse.jdt.internal.compiler.ast.Expression;
 import org.eclipse.jdt.internal.compiler.ast.FieldDeclaration;
@@ -340,11 +341,11 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 		
 		// @formatter:off
 		/*
-		 * Set<UpsortableSet> set =
-		 * UpsortableSets.getGlobalUpsortable().get(this.getClass().getName() +
-		 * "." + field.getName());
+		 * Set<UpsortableSet> set = UpsortableSets.getGlobalUpsortable().get(this.getClass().getName() + "." + fname);
 		 */
+		LocalDeclaration theSet = new LocalDeclaration("set".toCharArray(), pS, pE);
 		{
+			/****** this.getClass().getName() ****/
 			// Right side - first call
 			MessageSend getClass = new MessageSend();
 			getClass.sourceStart = pS;
@@ -361,21 +362,58 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 			setGeneratedBy(getName, source);
 			getName.receiver = getClass;
 			getName.selector = "getName".toCharArray();
-		}
+			/****** END this.getClass().getName() ****/
+			
+			
+			/****** field.getName() *****/
+			char[] fnameVariableName = "fname".toCharArray();
+			SingleNameReference fnameReference = new SingleNameReference(fnameVariableName, p);
+			setGeneratedBy(fnameReference, source);
+			/****** END field.getName() ****/
 		
-		// @formatter:on
-		{
+			/****** this.getClass().getName() + "." + field.getName()) ******/
+			final int PLUS = OperatorIds.PLUS;
+			char[] concat = ".".toCharArray();
+			Expression current = new StringLiteral(concat, pS, pE, 0);
+			
+			current = new BinaryExpression(getName, current, PLUS);
+			setGeneratedBy(current, source);			
+			current = new BinaryExpression(current, fnameReference,PLUS);
+			setGeneratedBy(current, source);			
+			/****** END this.getClass().getName() + "." + field.getName()) ******/
+		
+			
+			/****** UpsortableSets.getGlobalUpsortable().get( ******/
+			NameReference upsortableSetsClass = HandleToString.generateQualifiedNameRef(source, "lombok".toCharArray(), "UpsortableSets".toCharArray());
+
+			// UpsortableSets.getGlobalUpsortable()
+			MessageSend getGlobalUpsortable = new MessageSend();
+			getGlobalUpsortable.sourceStart = pS;
+			getGlobalUpsortable.sourceEnd = pE;
+			setGeneratedBy(getGlobalUpsortable, source);
+			getGlobalUpsortable.receiver = upsortableSetsClass;
+			getGlobalUpsortable.selector = "getGlobalUpsortable".toCharArray();
+			
+			MessageSend lastGet = new MessageSend();
+			lastGet.sourceStart = pS;
+			lastGet.sourceEnd = pE;
+			setGeneratedBy(lastGet, source);
+			lastGet.receiver = getGlobalUpsortable;
+			lastGet.selector = "get".toCharArray();
+			lastGet.arguments = new Expression[] {current};
+			
+			/****** END UpsortableSets.getGlobalUpsortable().get()******/
+			
 			// Left side
 			ParameterizedSingleTypeReference pstr = new ParameterizedSingleTypeReference("Set".toCharArray(), new TypeReference[] {new SingleTypeReference("UpsortableSet".toCharArray(), p)}, 0, p);
-			LocalDeclaration fielClass = new LocalDeclaration("set".toCharArray(), pS, pE);
-			fielClass.modifiers |= Modifier.FINAL;
-			fieldClass.type = pstr;
 			
-			// Right side
+			theSet.modifiers |= Modifier.FINAL;
+			theSet.type = pstr;
 			
-			// Assign
-			// fieldClass.initialization = rightside;
+			theSet.initialization = lastGet;
+			System.out.println("hello");
 		}
+		
 		TryStatement tryStatement = new TryStatement();
 		setGeneratedBy(tryStatement, source);
 		tryStatement.tryBlock = new Block(0);
@@ -392,7 +430,7 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 		block.sourceEnd = pE;
 		setGeneratedBy(block, source);
 		block.statements = new Statement[] {};
-		tryStatement.tryBlock.statements = new Statement[]{fieldClass};
+		tryStatement.tryBlock.statements = new Statement[]{fieldClass,theSet};
 		tryStatement.catchBlocks = new Block[] {block};
 		statements.add(tryStatement);
 		
@@ -413,9 +451,11 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 	 * final String fname = this.getClass().getDeclaredField("foo").getName();
 	 * DONE
 	 * 
-	 * Set<UpsortableSet> set =
+	 * <<<<<<< HEAD Set<UpsortableSet> set =
 	 * UpsortableSets.getGlobalUpsortable().get(this.getClass().getName() + "."
-	 * + fname);
+	 * + fname); ======= Set<UpsortableSet> set =
+	 * UpsortableSets.getGlobalUpsortable().get(this.getClass().getName() + "."
+	 * + fname); DONE >>>>>>> refs/remotes/origin/master
 	 * 
 	 * UpsortableSet[] participatingSets = new UpsortableSet[set.size()];
 	 * 
