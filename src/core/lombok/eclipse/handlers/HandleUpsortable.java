@@ -27,13 +27,11 @@ import static lombok.eclipse.handlers.EclipseHandlerUtil.*;
 import static lombok.eclipse.handlers.EclipseHandlerUtil.toAllSetterNames;
 import static lombok.eclipse.handlers.EclipseHandlerUtil.toSetterName;
 
-import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 
 import org.eclipse.jdt.internal.compiler.ast.ASTNode;
 import org.eclipse.jdt.internal.compiler.ast.Annotation;
@@ -42,7 +40,6 @@ import org.eclipse.jdt.internal.compiler.ast.Assignment;
 import org.eclipse.jdt.internal.compiler.ast.EqualExpression;
 import org.eclipse.jdt.internal.compiler.ast.Expression;
 import org.eclipse.jdt.internal.compiler.ast.FieldDeclaration;
-import org.eclipse.jdt.internal.compiler.ast.FieldReference;
 import org.eclipse.jdt.internal.compiler.ast.IfStatement;
 import org.eclipse.jdt.internal.compiler.ast.ImportReference;
 import org.eclipse.jdt.internal.compiler.ast.LocalDeclaration;
@@ -338,18 +335,39 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 			// Do not add this goes into try catch statement
 			// statements.add(fieldClass);
 		}
-		//
-		//
+		
+		// @formatter:off
 		/*
-		 * Set<UpsortableSet> set = UpsortableSets.getGlobalUpsortable()
-		 * .get(this.getClass().getName() + "." + field.getName());
+		 * Set<UpsortableSet> set = UpsortableSets.getGlobalUpsortable().get(this.getClass().getName() + "." + field.getName());
 		 */
+		{
+		// Right side - first call
+		MessageSend getClass = new MessageSend();
+		getClass.sourceStart = pS;
+		getClass.sourceEnd = pE;
+		setGeneratedBy(getClass, source);
+		ThisReference thisReference = new ThisReference(pS, pE);
+		setGeneratedBy(thisReference, source);
+		getClass.receiver = thisReference;
+		getClass.selector = "getClass".toCharArray();
+		// Right side - second call
+		MessageSend getName = new MessageSend();
+		getName.sourceStart = pS;
+		getName.sourceEnd = pE;
+		setGeneratedBy(getName, source);
+		getName.receiver = getClass;
+		getName.selector = "getName".toCharArray();
+		}
+		
+		
+		// @formatter:on
 		{
 			// Left side
 			ParameterizedSingleTypeReference pstr = new ParameterizedSingleTypeReference("Set".toCharArray(), new TypeReference[] {new SingleTypeReference("UpsortableSet".toCharArray(), p)}, 0, p);
-			LocalDeclaration fieldClass = new LocalDeclaration("sets".toCharArray(), pS, pE);
+			LocalDeclaration fieldClass = new LocalDeclaration("set".toCharArray(), pS, pE);
 			fieldClass.modifiers |= Modifier.FINAL;
 			fieldClass.type = pstr;
+			
 			// Right side
 			
 			// Assign
@@ -363,25 +381,36 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 		return method;
 	}
 	
+	// @formatter:off
 	/**
-	 * // Fail fast if (this.date == newDate) { return; } // Get the list of
-	 * registered set try {
+	 * // Fail fast if (this.date == newDate) { return; } // Get the list of registered set DONE 
 	 * 
-	 * //final java.lang.reflect.Field field =
-	 * this.getClass().getDeclaredField("i"); Field field =
-	 * this.getClass().getDeclaredField("date");
+	 * try {
 	 * 
+	 * 		final String fname = this.getClass().getDeclaredField("foo").getName(); DONE
 	 * 
-	 * Set<UpsortableSet> set = UpsortableSets.getGlobalUpsortable()
-	 * .get(this.getClass().getName() + "." + field.getName());
+	 * 		Set<UpsortableSet> set = UpsortableSets.getGlobalUpsortable().get(this.getClass().getName() + "." + fname);
 	 * 
-	 * UpsortableSet[] participatingSets = new UpsortableSet[set.size()]; int
-	 * found = 0; for (UpsortableSet<?> upsortableSet : set) { if
-	 * (upsortableSet.remove(this)) { participatingSets[found++] =
-	 * upsortableSet; } } // Update value this.date = newDate; // Add in the
-	 * sets the element is participating for (int i = 0; i < found; i++) {
-	 * participatingSets[i].add(this); } } catch (Exception e) {
-	 * e.printStackTrace(); }
+	 * 		UpsortableSet[] participatingSets = new UpsortableSet[set.size()];
+	 * 
+	 * 		int found = 0;
+	 * 		for (UpsortableSet<?> upsortableSet : set) {
+	 * 				if (upsortableSet.remove(this)) {
+	 * 					participatingSets[found++] = upsortableSet;
+	 * 		 	}
+	 * 		} 
+	 * 
+	 * 		// Update value
+	 * 		this.$field = newDate;
+	 * 
+	 * 		// Add in the sets the element is participating
+	 * 		for (int i = 0; i < found; i++) {
+	 *  		participatingSets[i].add(this);
+	 * 		}
+	 * } catch (Exception e) {
+	 * 		e.printStackTrace();
+	 * } // method end
 	 */
+	// @formatter:on
 	
 }
