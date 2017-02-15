@@ -2,11 +2,7 @@
 
 * Install [ant](https://ant.apache.org/bindownload.cgi)
 * Clone the repository
-* Run 'ant dist' to create the lombok.jar
-* 'ant setupJavaOracle8TestEnvironment'
-* Double click the lombok.jar and patch your Eclipse
-* Run 'ant eclipse' to prepare the project
-* Import the project into Eclipse
+* [Follow these instructions](http://stackoverflow.com/questions/31105288/how-can-i-debug-a-custom-annotation-in-lombok)
 
 # Development process
 
