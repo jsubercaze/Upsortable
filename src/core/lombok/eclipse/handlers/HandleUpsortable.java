@@ -29,6 +29,7 @@ import static lombok.eclipse.handlers.EclipseHandlerUtil.toSetterName;
 
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -42,6 +43,7 @@ import org.eclipse.jdt.internal.compiler.ast.BinaryExpression;
 import org.eclipse.jdt.internal.compiler.ast.EqualExpression;
 import org.eclipse.jdt.internal.compiler.ast.Expression;
 import org.eclipse.jdt.internal.compiler.ast.FieldDeclaration;
+import org.eclipse.jdt.internal.compiler.ast.ForeachStatement;
 import org.eclipse.jdt.internal.compiler.ast.IfStatement;
 import org.eclipse.jdt.internal.compiler.ast.ImportReference;
 import org.eclipse.jdt.internal.compiler.ast.LocalDeclaration;
@@ -97,10 +99,12 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 		}
 		
 		for (EclipseNode field : typeNode.down()) {
+			if (field.getKind() == Kind.METHOD) {
+				System.out.println(field);
+			}
 			if (field.getKind() != Kind.FIELD) continue;
 			FieldDeclaration fieldDecl = (FieldDeclaration) field.get();
 			if (!filterField(fieldDecl)) continue;
-			
 			// Skip final fields.
 			if ((fieldDecl.modifiers & ClassFileConstants.AccFinal) != 0) continue;
 			
@@ -159,6 +163,7 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 			generateSetterForType(node, annotationNode, level, false);
 			break;
 		}
+		int a = 3;
 	}
 	
 	private void addImport(EclipseNode topNode) {
@@ -428,6 +433,41 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 			found.initialization = makeIntLiteral("0".toCharArray(), source);
 		}
 		
+		/*
+		 * for(UpsortableSet<?> upsortableSet : set){
+		 * 
+		 */
+		ForeachStatement foreach = null;
+		{
+			LocalDeclaration upsortableSet = new LocalDeclaration("upsortableSet".toCharArray(), pS, pE);
+			SingleNameReference set = new SingleNameReference("set".toCharArray(), p);
+			upsortableSet.type =  new ParameterizedSingleTypeReference("UpsortableSet".toCharArray(),
+					new TypeReference[] {new SingleTypeReference("?".toCharArray(), p)}, 0, p);
+			foreach = new ForeachStatement(upsortableSet, pS);
+//			new LocalVariableb
+//			foreach.collectionVariable = set;
+			foreach.collection=set;
+			//foreach.scope= new Blc
+		}
+		
+		/*
+		 * if(upsortableSet.remove(this))
+		 */
+		IfStatement ifstmt;
+		{
+			MessageSend remove = new MessageSend();
+			remove.sourceStart = pS;
+			remove.sourceEnd = pE;
+			setGeneratedBy(remove, source);
+			remove.receiver= new SingleNameReference("upsortableSet".toCharArray(), p);
+			remove.selector = "get".toCharArray();
+			remove.arguments = new Expression[] {new ThisReference(pS, pE)};
+			//If
+			ifstmt = new IfStatement(remove, found, pS, pE); //FIXME replace found by 'participating[....
+			foreach.action=ifstmt;
+		}
+		
+		
 		TryStatement tryStatement = new TryStatement();
 		setGeneratedBy(tryStatement, source);
 		tryStatement.tryBlock = new Block(0);
@@ -445,7 +485,7 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 		block.sourceEnd = pE;
 		setGeneratedBy(block, source);
 		block.statements = new Statement[] {};
-		tryStatement.tryBlock.statements = new Statement[] {fieldClass, theSet, found};
+		tryStatement.tryBlock.statements = new Statement[] {fieldClass, theSet, found,foreach};
 		tryStatement.catchBlocks = new Block[] {block};
 		statements.add(tryStatement);
 		
