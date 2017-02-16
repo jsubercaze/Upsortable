@@ -455,9 +455,9 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 		/*
 		 * UpsortableSet[] participatingSets = new UpsortableSet[set.size()];
 		 */
+		LocalDeclaration participatingSets = new LocalDeclaration("participatingSets".toCharArray(), pS, pE);
 		{
 			ArrayTypeReference part = new ArrayTypeReference("UpsortableSet".toCharArray(), 1, p);
-			LocalDeclaration participatingSets = new LocalDeclaration("participatingSets".toCharArray(), pS, pE);
 			participatingSets.type = part;
 			// Create the new Array
 			ArrayAllocationExpression allocationStatement = new ArrayAllocationExpression();
@@ -475,7 +475,6 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 			// allocationStatement. = new Expression[] {send};
 			allocationStatement.dimensions = new Expression[] {send};
 			participatingSets.initialization = allocationStatement;
-			int a = 3;
 		}
 
 		
@@ -499,8 +498,9 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 		{
 			LocalDeclaration upsortableSet = new LocalDeclaration("upsortableSet".toCharArray(), pS, pE);
 			SingleNameReference set = new SingleNameReference("set".toCharArray(), p);
-			upsortableSet.type =  new ParameterizedSingleTypeReference("UpsortableSet".toCharArray(),
-					new TypeReference[] {new SingleTypeReference("?".toCharArray(), p)}, 0, p);
+			upsortableSet.type = new SingleTypeReference("UpsortableSet".toCharArray(), p);
+//			upsortableSet.type =  new ParameterizedSingleTypeReference("UpsortableSet".toCharArray(),
+//					new TypeReference[] {new SingleTypeReference("?".toCharArray(), p)}, 0, p);
 			foreach = new ForeachStatement(upsortableSet, pS);
 //			new LocalVariableb
 //			foreach.collectionVariable = set;
@@ -519,7 +519,7 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 			remove.sourceEnd = pE;
 			setGeneratedBy(remove, source);
 			remove.receiver= new SingleNameReference("upsortableSet".toCharArray(), p);
-			remove.selector = "get".toCharArray();
+			remove.selector = "remove".toCharArray();
 			remove.arguments = new Expression[] {new ThisReference(pS, pE)};
 			
 			
@@ -527,20 +527,30 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 			Block block = new Block(0);
 			 SingleNameReference foundL = new SingleNameReference("found".toCharArray(), p);
 			 SingleNameReference foundR = new SingleNameReference("found".toCharArray(), p);
-			 BinaryExpression plusOne = new BinaryExpression(foundR,  makeIntLiteral("0".toCharArray(), source), OperatorIds.PLUS);
+			 BinaryExpression plusOne = new BinaryExpression(foundR,  makeIntLiteral("1".toCharArray(), source), OperatorIds.PLUS);
 			 Assignment as = new Assignment(foundL, plusOne, pE);
 			//Array ref
 			SingleNameReference expression = new SingleNameReference("found".toCharArray(), p);
-			SingleNameReference arrayRef = new SingleNameReference("participatingSets".toCharArray(), p);
-			ArrayReference arrayReference = new ArrayReference(arrayRef, expression);
-			arrayReference.receiver =  new SingleNameReference("upsortableSet".toCharArray(), p);
+			SingleNameReference upsort = new SingleNameReference("upsortableSet".toCharArray(), p);
+			ArrayReference arrayReference = new ArrayReference(new SingleNameReference("participatingSets".toCharArray(), p), expression);
+			//arrayReference.receiver =  ;
+			 Assignment as2 = new Assignment(arrayReference, upsort, pE);
 			block.sourceStart=pS;block.sourceEnd=pE;
-			block.statements = new Statement[]{as,arrayReference};
+			block.statements = new Statement[]{as,as2};
 			 
 			//IF
 			ifstmt = new IfStatement(remove, block, pS, pE); //FIXME replace found by 'participating[....
 			
 			foreach.action=ifstmt;
+		}
+		/*
+		 * this.field = field
+		 */
+		Assignment setter;
+		{
+			Expression lfRef = createFieldAccessor(fieldNode, FieldAccess.ALWAYS_FIELD, source);
+			NameReference fRef = new SingleNameReference(field.name, p);
+			setter = new Assignment(lfRef, fRef, pE);
 		}
 		
 	
@@ -561,15 +571,15 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 		block.sourceEnd = pE;
 		setGeneratedBy(block, source);
 		block.statements = new Statement[] {};
-		tryStatement.tryBlock.statements = new Statement[] {fieldClass, theSet, found,foreach};
+		tryStatement.tryBlock.statements = new Statement[] {fieldClass, theSet,participatingSets, found,foreach,setter};
 		tryStatement.catchBlocks = new Block[] {block};
 		statements.add(tryStatement);
 		
 		method.statements = statements.toArray(new Statement[0]);
 		param.annotations = copyAnnotations(source, nonNulls, nullables, onParam.toArray(new Annotation[0]));
-		
 		method.traverse(new SetGeneratedByVisitor(source), parent.scope);
 		return method;
+		
 	}
 	
 	// @formatter:off
