@@ -34,8 +34,12 @@ import java.util.Collections;
 import java.util.List;
 
 import org.eclipse.jdt.internal.compiler.ast.ASTNode;
+import org.eclipse.jdt.internal.compiler.ast.AllocationExpression;
 import org.eclipse.jdt.internal.compiler.ast.Annotation;
 import org.eclipse.jdt.internal.compiler.ast.Argument;
+import org.eclipse.jdt.internal.compiler.ast.ArrayAllocationExpression;
+import org.eclipse.jdt.internal.compiler.ast.ArrayInitializer;
+import org.eclipse.jdt.internal.compiler.ast.ArrayTypeReference;
 import org.eclipse.jdt.internal.compiler.ast.Assignment;
 import org.eclipse.jdt.internal.compiler.ast.EqualExpression;
 import org.eclipse.jdt.internal.compiler.ast.Expression;
@@ -134,8 +138,11 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 		handleFlagUsage(annotationNode, ConfigurationKeys.SETTER_FLAG_USAGE, "@Setter");
 		
 		EclipseNode node = annotationNode.up();
+		// Inject the required imports
 		EclipseNode topNode = node.top();
-		addImport(topNode);
+		addImports(topNode);
+		// Inject the UpsortableValue interface
+		addInterface(node);
 		AccessLevel level = annotation.getInstance().value();
 		if (level == AccessLevel.NONE || node == null) return;
 		
@@ -158,13 +165,30 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 		}
 	}
 	
-	private void addImport(EclipseNode topNode) {
+	private void addInterface(EclipseNode node) {
+		ASTNode source = node.get();
+		int pS = source.sourceStart, pE = source.sourceEnd;
+		long p = (long) pS << 32 | pE;
+		// char[][] importToToken = importToToken("lombok.UpsortableValue");
+		SingleTypeReference interfaceRef = new SingleTypeReference("UpsortableValue".toCharArray(), p);
+		injectInterface(node, interfaceRef);
+	}
+	
+	private void addImports(EclipseNode topNode) {
 		ASTNode source = topNode.get();
 		int pS = source.sourceStart, pE = source.sourceEnd;
 		long p = (long) pS << 32 | pE;
 		char[][] importToToken = importToToken("java.util.Set");
 		ImportReference setRef = new ImportReference(importToToken, new long[] {pS, pE}, false, 0);
-		int a = 2;
+		injectImport(topNode, setRef);
+		importToToken = importToToken("lombok.UpsortableSets");
+		setRef = new ImportReference(importToToken, new long[] {pS, pE}, false, 0);
+		injectImport(topNode, setRef);
+		importToToken = importToToken("lombok.UpsortableSet");
+		setRef = new ImportReference(importToToken, new long[] {pS, pE}, false, 0);
+		injectImport(topNode, setRef);
+		importToToken = importToToken("lombok.UpsortableValue");
+		setRef = new ImportReference(importToToken, new long[] {pS, pE}, false, 0);
 		injectImport(topNode, setRef);
 	}
 	
@@ -334,31 +358,33 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 			fieldClass.initialization = getName;
 			// Do not add this goes into try catch statement
 			// statements.add(fieldClass);
+			
 		}
 		
 		// @formatter:off
 		/*
-		 * Set<UpsortableSet> set = UpsortableSets.getGlobalUpsortable().get(this.getClass().getName() + "." + field.getName());
+		 * Set<UpsortableSet> set =
+		 * UpsortableSets.getGlobalUpsortable().get(this.getClass().getName() +
+		 * "." + field.getName());
 		 */
 		{
-		// Right side - first call
-		MessageSend getClass = new MessageSend();
-		getClass.sourceStart = pS;
-		getClass.sourceEnd = pE;
-		setGeneratedBy(getClass, source);
-		ThisReference thisReference = new ThisReference(pS, pE);
-		setGeneratedBy(thisReference, source);
-		getClass.receiver = thisReference;
-		getClass.selector = "getClass".toCharArray();
-		// Right side - second call
-		MessageSend getName = new MessageSend();
-		getName.sourceStart = pS;
-		getName.sourceEnd = pE;
-		setGeneratedBy(getName, source);
-		getName.receiver = getClass;
-		getName.selector = "getName".toCharArray();
+			// Right side - first call
+			MessageSend getClass = new MessageSend();
+			getClass.sourceStart = pS;
+			getClass.sourceEnd = pE;
+			setGeneratedBy(getClass, source);
+			ThisReference thisReference = new ThisReference(pS, pE);
+			setGeneratedBy(thisReference, source);
+			getClass.receiver = thisReference;
+			getClass.selector = "getClass".toCharArray();
+			// Right side - second call
+			MessageSend getName = new MessageSend();
+			getName.sourceStart = pS;
+			getName.sourceEnd = pE;
+			setGeneratedBy(getName, source);
+			getName.receiver = getClass;
+			getName.selector = "getName".toCharArray();
 		}
-		
 		
 		// @formatter:on
 		{
@@ -373,6 +399,31 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 			// Assign
 			// fieldClass.initialization = rightside;
 		}
+		/*
+		 * UpsortableSet[] participatingSets = new UpsortableSet[set.size()];
+		 */
+		{
+			ArrayTypeReference part = new ArrayTypeReference("UpsortableSet".toCharArray(), 1, p);
+			LocalDeclaration participatingSets = new LocalDeclaration("participatingSets".toCharArray(), pS, pE);
+			participatingSets.type = part;
+			// Create the new Array
+			ArrayAllocationExpression allocationStatement = new ArrayAllocationExpression();
+			allocationStatement.type = new SingleTypeReference("UpsortableSet".toCharArray(), p);
+			
+			MessageSend send = new MessageSend();
+			send.receiver = new SingleNameReference("set".toCharArray(), p);
+			send.selector = "size".toCharArray();
+			// Init the array
+			ArrayInitializer fieldNames = new ArrayInitializer();
+			fieldNames.sourceStart = pS;
+			fieldNames.sourceEnd = pE;
+			fieldNames.expressions = new Expression[] {send};
+			
+			// allocationStatement. = new Expression[] {send};
+			allocationStatement.dimensions = new Expression[] {send};
+			participatingSets.initialization = allocationStatement;
+			int a = 3;
+		}
 		
 		method.statements = statements.toArray(new Statement[0]);
 		param.annotations = copyAnnotations(source, nonNulls, nullables, onParam.toArray(new Annotation[0]));
@@ -383,33 +434,29 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 	
 	// @formatter:off
 	/**
-	 * // Fail fast if (this.date == newDate) { return; } // Get the list of registered set DONE 
+	 * // Fail fast if (this.date == newDate) { return; } // Get the list of
+	 * registered set DONE
 	 * 
 	 * try {
 	 * 
-	 * 		final String fname = this.getClass().getDeclaredField("foo").getName(); DONE
+	 * final String fname = this.getClass().getDeclaredField("foo").getName();
+	 * DONE
 	 * 
-	 * 		Set<UpsortableSet> set = UpsortableSets.getGlobalUpsortable().get(this.getClass().getName() + "." + fname);
+	 * Set<UpsortableSet> set =
+	 * UpsortableSets.getGlobalUpsortable().get(this.getClass().getName() + "."
+	 * + fname);
 	 * 
-	 * 		UpsortableSet[] participatingSets = new UpsortableSet[set.size()];
+	 * UpsortableSet[] participatingSets = new UpsortableSet[set.size()];
 	 * 
-	 * 		int found = 0;
-	 * 		for (UpsortableSet<?> upsortableSet : set) {
-	 * 				if (upsortableSet.remove(this)) {
-	 * 					participatingSets[found++] = upsortableSet;
-	 * 		 	}
-	 * 		} 
+	 * int found = 0; for (UpsortableSet<?> upsortableSet : set) { if
+	 * (upsortableSet.remove(this)) { participatingSets[found++] =
+	 * upsortableSet; } }
 	 * 
-	 * 		// Update value
-	 * 		this.$field = newDate;
+	 * // Update value this.$field = newDate;
 	 * 
-	 * 		// Add in the sets the element is participating
-	 * 		for (int i = 0; i < found; i++) {
-	 *  		participatingSets[i].add(this);
-	 * 		}
-	 * } catch (Exception e) {
-	 * 		e.printStackTrace();
-	 * } // method end
+	 * // Add in the sets the element is participating for (int i = 0; i <
+	 * found; i++) { participatingSets[i].add(this); } } catch (Exception e) {
+	 * e.printStackTrace(); } // method end
 	 */
 	// @formatter:on
 	

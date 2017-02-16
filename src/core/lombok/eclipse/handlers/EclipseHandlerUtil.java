@@ -1300,6 +1300,27 @@ public class EclipseHandlerUtil {
 		return injectField(type, field);
 	}
 	
+	public static EclipseNode injectInterface(EclipseNode top, TypeReference ref) {
+		TypeDeclaration type = (TypeDeclaration) top.get();
+		
+		if (type.superInterfaces == null) {
+			type.superInterfaces = new TypeReference[] {ref};
+		} else {
+			int size = type.superInterfaces.length;
+			TypeReference[] newArray = new TypeReference[size + 1];
+			// Copy the previous
+			System.arraycopy(type.superInterfaces, 0, newArray, 0, size);
+			// Add the new one
+			newArray[size] = ref;
+			type.superInterfaces = newArray;
+			// ((EclipseImportList)top.getAst().getImportList()).setImports(newArray);
+		}
+		
+		// Dirty rebuild all the compilation unit
+		return top.add(top.top().get(), Kind.COMPILATION_UNIT);
+		
+	}
+	
 	public static EclipseNode injectImport(EclipseNode top, ImportReference ref) {
 		CompilationUnitDeclaration unit = (CompilationUnitDeclaration) top.get();
 		
@@ -1310,10 +1331,10 @@ public class EclipseHandlerUtil {
 		System.arraycopy(unit.imports, 0, newArray, 0, size);
 		// Add the new one
 		newArray[size] = ref;
-		unit.imports= newArray;
-		((EclipseImportList)top.getAst().getImportList()).setImports(newArray);
+		unit.imports = newArray;
+		((EclipseImportList) top.getAst().getImportList()).setImports(newArray);
 		return top.add(top.get(), Kind.COMPILATION_UNIT);
-	
+		
 	}
 	
 	/**
