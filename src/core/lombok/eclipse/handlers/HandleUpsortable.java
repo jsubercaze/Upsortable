@@ -527,7 +527,13 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 			ArrayReference arrayReference = new ArrayReference(arrayRef, iPlusPlus);
 			arrayReference.receiver =  new SingleNameReference("upsortableSet".toCharArray(), p);
 			
-			//If
+			//Inside the IF
+			Block block = new Block(0);
+			 SingleNameReference foundL = new SingleNameReference("found".toCharArray(), p);
+			 SingleNameReference foundR = new SingleNameReference("found".toCharArray(), p);
+			 //BinaryExpression plusOne = new Bin
+			 
+			//IF
 			ifstmt = new IfStatement(remove, arrayReference, pS, pE); //FIXME replace found by 'participating[....
 			
 			foreach.action=ifstmt;
@@ -577,17 +583,20 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 		 * 		int found = 0;
 		 * 		for (UpsortableSet<?> upsortableSet : set) {
 		 * 				if (upsortableSet.remove(this)) {
-		 * 					participatingSets[found++] = upsortableSet;
+		 * 					participatingSets[found] = upsortableSet;
+							found = found+1;
 		 * 		 	}
 		 * 		} 
 		 * 
 		 * 		// Update value
 		 * 		this.$field = newDate;
 		 * 
-		 * 		// Add in the sets the element is participating
-		 * 		for (int i = 0; i < found; i++) {
-		 *  		participatingSets[i].add(this);
-		 * 		}
+		 * 		int i = 0;
+		 *   	while(i<found){
+		 *			participatingSets[i].add(this);
+		 *		 	i=i+1;
+		 *      }
+			
 		 * } catch (Exception e) {
 		 * 		e.printStackTrace();
 		 * } // method end
