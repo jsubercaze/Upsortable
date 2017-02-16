@@ -29,25 +29,20 @@ import static lombok.eclipse.handlers.EclipseHandlerUtil.toSetterName;
 
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
-import org.eclipse.jdt.core.dom.InfixExpression;
 import org.eclipse.jdt.internal.compiler.ast.ASTNode;
-import org.eclipse.jdt.internal.compiler.ast.AllocationExpression;
 import org.eclipse.jdt.internal.compiler.ast.Annotation;
 import org.eclipse.jdt.internal.compiler.ast.Argument;
-
 import org.eclipse.jdt.internal.compiler.ast.ArrayAllocationExpression;
 import org.eclipse.jdt.internal.compiler.ast.ArrayInitializer;
-import org.eclipse.jdt.internal.compiler.ast.ArrayTypeReference;
-
 import org.eclipse.jdt.internal.compiler.ast.ArrayReference;
+import org.eclipse.jdt.internal.compiler.ast.ArrayTypeReference;
 import org.eclipse.jdt.internal.compiler.ast.Assignment;
-import org.eclipse.jdt.internal.compiler.ast.Block;
 import org.eclipse.jdt.internal.compiler.ast.BinaryExpression;
+import org.eclipse.jdt.internal.compiler.ast.Block;
 import org.eclipse.jdt.internal.compiler.ast.EqualExpression;
 import org.eclipse.jdt.internal.compiler.ast.Expression;
 import org.eclipse.jdt.internal.compiler.ast.FieldDeclaration;
@@ -60,7 +55,6 @@ import org.eclipse.jdt.internal.compiler.ast.MethodDeclaration;
 import org.eclipse.jdt.internal.compiler.ast.NameReference;
 import org.eclipse.jdt.internal.compiler.ast.OperatorIds;
 import org.eclipse.jdt.internal.compiler.ast.ParameterizedSingleTypeReference;
-import org.eclipse.jdt.internal.compiler.ast.PostfixExpression;
 import org.eclipse.jdt.internal.compiler.ast.ReturnStatement;
 import org.eclipse.jdt.internal.compiler.ast.SingleNameReference;
 import org.eclipse.jdt.internal.compiler.ast.SingleTypeReference;
@@ -72,6 +66,7 @@ import org.eclipse.jdt.internal.compiler.ast.TryStatement;
 import org.eclipse.jdt.internal.compiler.ast.TypeDeclaration;
 import org.eclipse.jdt.internal.compiler.ast.TypeReference;
 import org.eclipse.jdt.internal.compiler.ast.UnaryExpression;
+import org.eclipse.jdt.internal.compiler.ast.WhileStatement;
 import org.eclipse.jdt.internal.compiler.classfmt.ClassFileConstants;
 import org.eclipse.jdt.internal.compiler.lookup.TypeIds;
 import org.mangosdk.spi.ProviderFor;
@@ -540,6 +535,59 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 		}
 		
 		
+		
+		/**
+		 * int i = 0;
+		 * while(i<found){
+		 *			participatingSets[i].add(this);
+		 *		 	i=i+1;
+		 *      }
+		 */
+		WhileStatement whileStmt;
+		LocalDeclaration iVariable;
+		{
+			Block block = new Block(0);
+
+			iVariable = new LocalDeclaration("i".toCharArray(), pS, pE);
+			iVariable.type = new SingleTypeReference("int".toCharArray(), p);
+			iVariable.initialization = makeIntLiteral("0".toCharArray(), source);
+			
+			// participatingSets[i].add(this);
+			SingleNameReference participantsSetsReference = new SingleNameReference("participatingSets".toCharArray(), p);
+			ArrayReference arrayRef = new ArrayReference(participantsSetsReference, new SingleNameReference("i".toCharArray(), p));
+			MessageSend addThis = new MessageSend();
+			addThis.sourceStart = pS;
+			addThis.sourceEnd = pE;
+			setGeneratedBy(addThis, source);
+			addThis.receiver = arrayRef;
+			addThis.selector = "add".toCharArray();
+			ThisReference thisReference = new ThisReference(pS, pE);
+			setGeneratedBy(thisReference, source);
+			addThis.arguments = new Expression[] {thisReference};
+			
+			
+			// i = i+1
+			SingleNameReference iVariableReference = new SingleNameReference("i".toCharArray(), p);
+			final int PLUS = OperatorIds.PLUS;
+			BinaryExpression initIVariable = new BinaryExpression(iVariableReference, makeIntLiteral("1".toCharArray(), source), PLUS);
+			setGeneratedBy(initIVariable, source);
+			Assignment assignmentIncr = new Assignment(iVariableReference, initIVariable, (int) p);
+			setGeneratedBy(assignmentIncr, source);
+
+			block.sourceStart = pS;
+			block.sourceEnd = pE;
+			setGeneratedBy(block, source);
+			block.statements = new Statement[] { addThis, assignmentIncr};
+			
+
+			// while condition
+			SingleNameReference iNameReference = new SingleNameReference("i".toCharArray(), p);
+			EqualExpression lessThanFound = new EqualExpression(iNameReference, new SingleNameReference("found".toCharArray(), p), OperatorIds.LESS);
+			setGeneratedBy(lessThanFound, source);
+			whileStmt = new WhileStatement(lessThanFound, block, pS, pE);
+
+			
+		}
 		TryStatement tryStatement = new TryStatement();
 		setGeneratedBy(tryStatement, source);
 		tryStatement.tryBlock = new Block(0);
@@ -557,7 +605,7 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 		block.sourceEnd = pE;
 		setGeneratedBy(block, source);
 		block.statements = new Statement[] {};
-		tryStatement.tryBlock.statements = new Statement[] {fieldClass, theSet, found,foreach};
+		tryStatement.tryBlock.statements = new Statement[] {fieldClass, theSet, found,foreach, iVariable, whileStmt};
 		tryStatement.catchBlocks = new Block[] {block};
 		statements.add(tryStatement);
 		
