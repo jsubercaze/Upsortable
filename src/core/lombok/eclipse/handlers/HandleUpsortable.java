@@ -527,7 +527,7 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 			//arrayReference.receiver =  ;
 			 Assignment as2 = new Assignment(arrayReference, upsort, pE);
 			block.sourceStart=pS;block.sourceEnd=pE;
-			block.statements = new Statement[]{as,as2};
+			block.statements = new Statement[]{as2,as};
 			 
 			//IF
 			ifstmt = new IfStatement(remove, block, pS, pE); //FIXME replace found by 'participating[....

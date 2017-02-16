@@ -21,8 +21,8 @@ import lombok.UpsortableValue;
         for (UpsortableSet upsortableSet : set) 
           if (upsortableSet.remove(this))
               {
-                found = (found + 1);
                 participatingSets[found] = upsortableSet;
+                found = (found + 1);
               }
         this.i = i;
         int localI = 0;
@@ -48,8 +48,8 @@ import lombok.UpsortableValue;
         for (UpsortableSet upsortableSet : set) 
           if (upsortableSet.remove(this))
               {
-                found = (found + 1);
                 participatingSets[found] = upsortableSet;
+                found = (found + 1);
               }
         this.foo = foo;
         int localI = 0;

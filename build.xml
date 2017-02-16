@@ -222,6 +222,7 @@ the common tasks and can be called on to run the main aspects of all the sub-scr
 			<src path="src/delombok" />
 			<include name="lombok/javac/**" />
 			<include name="lombok/delombok/**" />
+			<include name="javassist/**" />
 			<classpath location="build/lombok" />
 			<classpath refid="build.path" />
 		</ivy:compile>
@@ -257,6 +258,7 @@ lombok.launch.AnnotationProcessorHider$ClaimingProcessor</echo>
 				<include name="lombok/launch/**" />
 				<include name="lombok/delombok/ant/Tasks*" />
 				<include name="lombok/javac/apt/Processor.class" />
+				<include name="javassist/**" />
 			</fileset>
 			<mappedresources>
 				<fileset dir="build/lombok">
@@ -267,6 +269,7 @@ lombok.launch.AnnotationProcessorHider$ClaimingProcessor</echo>
 					<exclude name="lombok/extern/**" />
 					<exclude name="lombok/launch/**" />
 					<exclude name="lombok/delombok/ant/Tasks*" />
+					<exclude name="javassist/**" />
 				</fileset>
 				<firstmatchmapper>
 					<globmapper from="*.class" to="*.SCL.lombok" />
