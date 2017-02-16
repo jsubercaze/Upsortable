@@ -104,9 +104,6 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 		}
 		
 		for (EclipseNode field : typeNode.down()) {
-			if (field.getKind() == Kind.METHOD) {
-				System.out.println(field);
-			}
 			if (field.getKind() != Kind.FIELD) continue;
 			FieldDeclaration fieldDecl = (FieldDeclaration) field.get();
 			if (!filterField(fieldDecl)) continue;
