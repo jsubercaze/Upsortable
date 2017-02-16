@@ -29,21 +29,29 @@ import static lombok.eclipse.handlers.EclipseHandlerUtil.toSetterName;
 
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+import org.eclipse.jdt.core.dom.InfixExpression;
 import org.eclipse.jdt.internal.compiler.ast.ASTNode;
 import org.eclipse.jdt.internal.compiler.ast.AllocationExpression;
 import org.eclipse.jdt.internal.compiler.ast.Annotation;
 import org.eclipse.jdt.internal.compiler.ast.Argument;
+
 import org.eclipse.jdt.internal.compiler.ast.ArrayAllocationExpression;
 import org.eclipse.jdt.internal.compiler.ast.ArrayInitializer;
 import org.eclipse.jdt.internal.compiler.ast.ArrayTypeReference;
+
+import org.eclipse.jdt.internal.compiler.ast.ArrayReference;
 import org.eclipse.jdt.internal.compiler.ast.Assignment;
+import org.eclipse.jdt.internal.compiler.ast.Block;
+import org.eclipse.jdt.internal.compiler.ast.BinaryExpression;
 import org.eclipse.jdt.internal.compiler.ast.EqualExpression;
 import org.eclipse.jdt.internal.compiler.ast.Expression;
 import org.eclipse.jdt.internal.compiler.ast.FieldDeclaration;
+import org.eclipse.jdt.internal.compiler.ast.ForeachStatement;
 import org.eclipse.jdt.internal.compiler.ast.IfStatement;
 import org.eclipse.jdt.internal.compiler.ast.ImportReference;
 import org.eclipse.jdt.internal.compiler.ast.LocalDeclaration;
@@ -52,6 +60,7 @@ import org.eclipse.jdt.internal.compiler.ast.MethodDeclaration;
 import org.eclipse.jdt.internal.compiler.ast.NameReference;
 import org.eclipse.jdt.internal.compiler.ast.OperatorIds;
 import org.eclipse.jdt.internal.compiler.ast.ParameterizedSingleTypeReference;
+import org.eclipse.jdt.internal.compiler.ast.PostfixExpression;
 import org.eclipse.jdt.internal.compiler.ast.ReturnStatement;
 import org.eclipse.jdt.internal.compiler.ast.SingleNameReference;
 import org.eclipse.jdt.internal.compiler.ast.SingleTypeReference;
@@ -59,8 +68,10 @@ import org.eclipse.jdt.internal.compiler.ast.Statement;
 import org.eclipse.jdt.internal.compiler.ast.StringLiteral;
 import org.eclipse.jdt.internal.compiler.ast.ThisReference;
 import org.eclipse.jdt.internal.compiler.ast.TrueLiteral;
+import org.eclipse.jdt.internal.compiler.ast.TryStatement;
 import org.eclipse.jdt.internal.compiler.ast.TypeDeclaration;
 import org.eclipse.jdt.internal.compiler.ast.TypeReference;
+import org.eclipse.jdt.internal.compiler.ast.UnaryExpression;
 import org.eclipse.jdt.internal.compiler.classfmt.ClassFileConstants;
 import org.eclipse.jdt.internal.compiler.lookup.TypeIds;
 import org.mangosdk.spi.ProviderFor;
@@ -98,10 +109,12 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 		}
 		
 		for (EclipseNode field : typeNode.down()) {
+			if (field.getKind() == Kind.METHOD) {
+				System.out.println(field);
+			}
 			if (field.getKind() != Kind.FIELD) continue;
 			FieldDeclaration fieldDecl = (FieldDeclaration) field.get();
 			if (!filterField(fieldDecl)) continue;
-			
 			// Skip final fields.
 			if ((fieldDecl.modifiers & ClassFileConstants.AccFinal) != 0) continue;
 			
@@ -163,6 +176,7 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 			generateSetterForType(node, annotationNode, level, false);
 			break;
 		}
+		int a = 3;
 	}
 	
 	private void addInterface(EclipseNode node) {
@@ -323,9 +337,9 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 		/*
 		 * String fname = this.getClass().getDeclaredField("$field").getName();
 		 */
+		LocalDeclaration fieldClass = new LocalDeclaration("fname".toCharArray(), pS, pE);
 		{
 			// Left side
-			LocalDeclaration fieldClass = new LocalDeclaration("fname".toCharArray(), pS, pE);
 			fieldClass.modifiers |= Modifier.FINAL;
 			fieldClass.type = new SingleTypeReference("String".toCharArray(), p);
 			setGeneratedBy(fieldClass, source);
@@ -365,9 +379,11 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 		/*
 		 * Set<UpsortableSet> set =
 		 * UpsortableSets.getGlobalUpsortable().get(this.getClass().getName() +
-		 * "." + field.getName());
+		 * "." + fname);
 		 */
+		LocalDeclaration theSet = new LocalDeclaration("set".toCharArray(), pS, pE);
 		{
+			/****** this.getClass().getName() ****/
 			// Right side - first call
 			MessageSend getClass = new MessageSend();
 			getClass.sourceStart = pS;
@@ -384,20 +400,56 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 			setGeneratedBy(getName, source);
 			getName.receiver = getClass;
 			getName.selector = "getName".toCharArray();
-		}
-		
-		// @formatter:on
-		{
+			/****** END this.getClass().getName() ****/
+			
+			/****** field.getName() *****/
+			char[] fnameVariableName = "fname".toCharArray();
+			SingleNameReference fnameReference = new SingleNameReference(fnameVariableName, p);
+			setGeneratedBy(fnameReference, source);
+			/****** END field.getName() ****/
+			
+			/****** this.getClass().getName() + "." + field.getName()) ******/
+			final int PLUS = OperatorIds.PLUS;
+			char[] concat = ".".toCharArray();
+			Expression current = new StringLiteral(concat, pS, pE, 0);
+			
+			current = new BinaryExpression(getName, current, PLUS);
+			setGeneratedBy(current, source);
+			current = new BinaryExpression(current, fnameReference, PLUS);
+			setGeneratedBy(current, source);
+			/******
+			 * END this.getClass().getName() + "." + field.getName())
+			 ******/
+			
+			/****** UpsortableSets.getGlobalUpsortable().get( ******/
+			NameReference upsortableSetsClass = HandleToString.generateQualifiedNameRef(source, "lombok".toCharArray(), "UpsortableSets".toCharArray());
+			
+			// UpsortableSets.getGlobalUpsortable()
+			MessageSend getGlobalUpsortable = new MessageSend();
+			getGlobalUpsortable.sourceStart = pS;
+			getGlobalUpsortable.sourceEnd = pE;
+			setGeneratedBy(getGlobalUpsortable, source);
+			getGlobalUpsortable.receiver = upsortableSetsClass;
+			getGlobalUpsortable.selector = "getGlobalUpsortable".toCharArray();
+			
+			MessageSend lastGet = new MessageSend();
+			lastGet.sourceStart = pS;
+			lastGet.sourceEnd = pE;
+			setGeneratedBy(lastGet, source);
+			lastGet.receiver = getGlobalUpsortable;
+			lastGet.selector = "get".toCharArray();
+			lastGet.arguments = new Expression[] {current};
+			
+			/****** END UpsortableSets.getGlobalUpsortable().get() ******/
+			
 			// Left side
 			ParameterizedSingleTypeReference pstr = new ParameterizedSingleTypeReference("Set".toCharArray(), new TypeReference[] {new SingleTypeReference("UpsortableSet".toCharArray(), p)}, 0, p);
-			LocalDeclaration fieldClass = new LocalDeclaration("set".toCharArray(), pS, pE);
-			fieldClass.modifiers |= Modifier.FINAL;
-			fieldClass.type = pstr;
 			
-			// Right side
+			theSet.modifiers |= Modifier.FINAL;
+			theSet.type = pstr;
 			
-			// Assign
-			// fieldClass.initialization = rightside;
+			theSet.initialization = lastGet;
+			
 		}
 		/*
 		 * UpsortableSet[] participatingSets = new UpsortableSet[set.size()];
@@ -424,6 +476,84 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 			participatingSets.initialization = allocationStatement;
 			int a = 3;
 		}
+
+		
+		/*
+		 * int found =0;
+		 */
+		LocalDeclaration found = new LocalDeclaration("found".toCharArray(), pS, pE);
+		{
+			found.sourceStart = pS;
+			found.sourceEnd = pE;
+			TypeReference baseTypeReference = TypeReference.baseTypeReference(TypeIds.T_int, 0);
+			found.type = baseTypeReference;
+			found.initialization = makeIntLiteral("0".toCharArray(), source);
+		}
+		
+		/*
+		 * for(UpsortableSet<?> upsortableSet : set){
+		 * 
+		 */
+		ForeachStatement foreach = null;
+		{
+			LocalDeclaration upsortableSet = new LocalDeclaration("upsortableSet".toCharArray(), pS, pE);
+			SingleNameReference set = new SingleNameReference("set".toCharArray(), p);
+			upsortableSet.type =  new ParameterizedSingleTypeReference("UpsortableSet".toCharArray(),
+					new TypeReference[] {new SingleTypeReference("?".toCharArray(), p)}, 0, p);
+			foreach = new ForeachStatement(upsortableSet, pS);
+//			new LocalVariableb
+//			foreach.collectionVariable = set;
+			foreach.collection=set;
+			//foreach.scope= new Blc
+		}
+		
+		/*
+		 * if(upsortableSet.remove(this))
+		 *    participatingSets[found++] = upsortableSet;
+		 */
+		IfStatement ifstmt;
+		{
+			MessageSend remove = new MessageSend();
+			remove.sourceStart = pS;
+			remove.sourceEnd = pE;
+			setGeneratedBy(remove, source);
+			remove.receiver= new SingleNameReference("upsortableSet".toCharArray(), p);
+			remove.selector = "get".toCharArray();
+			remove.arguments = new Expression[] {new ThisReference(pS, pE)};
+			//Array ref
+			SingleNameReference expression = new SingleNameReference("found".toCharArray(), p);
+			UnaryExpression iPlusPlus = new UnaryExpression(expression, OperatorIds.MINUS_MINUS);
+			SingleNameReference arrayRef = new SingleNameReference("participatingSets".toCharArray(), p);
+			ArrayReference arrayReference = new ArrayReference(arrayRef, iPlusPlus);
+			arrayReference.receiver =  new SingleNameReference("upsortableSet".toCharArray(), p);
+			
+			//If
+			ifstmt = new IfStatement(remove, arrayReference, pS, pE); //FIXME replace found by 'participating[....
+			
+			foreach.action=ifstmt;
+		}
+		
+		
+		TryStatement tryStatement = new TryStatement();
+		setGeneratedBy(tryStatement, source);
+		tryStatement.tryBlock = new Block(0);
+		// Positions for in-method generated nodes are special
+		tryStatement.tryBlock.sourceStart = pS;
+		tryStatement.tryBlock.sourceEnd = pE;
+		setGeneratedBy(tryStatement.tryBlock, source);
+		Argument catchArg = new Argument("e".toCharArray(), pE, new SingleTypeReference("NoSuchFieldException".toCharArray(), p), Modifier.FINAL);
+		setGeneratedBy(catchArg, source);
+		catchArg.declarationSourceEnd = catchArg.declarationEnd = catchArg.sourceEnd = pE;
+		catchArg.declarationSourceStart = catchArg.modifiersSourceStart = catchArg.sourceStart = pE;
+		tryStatement.catchArguments = new Argument[] {catchArg};
+		Block block = new Block(0);
+		block.sourceStart = pS;
+		block.sourceEnd = pE;
+		setGeneratedBy(block, source);
+		block.statements = new Statement[] {};
+		tryStatement.tryBlock.statements = new Statement[] {fieldClass, theSet, found,foreach};
+		tryStatement.catchBlocks = new Block[] {block};
+		statements.add(tryStatement);
 		
 		method.statements = statements.toArray(new Statement[0]);
 		param.annotations = copyAnnotations(source, nonNulls, nullables, onParam.toArray(new Annotation[0]));
@@ -433,31 +563,34 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 	}
 	
 	// @formatter:off
-	/**
-	 * // Fail fast if (this.date == newDate) { return; } // Get the list of
-	 * registered set DONE
-	 * 
-	 * try {
-	 * 
-	 * final String fname = this.getClass().getDeclaredField("foo").getName();
-	 * DONE
-	 * 
-	 * Set<UpsortableSet> set =
-	 * UpsortableSets.getGlobalUpsortable().get(this.getClass().getName() + "."
-	 * + fname);
-	 * 
-	 * UpsortableSet[] participatingSets = new UpsortableSet[set.size()];
-	 * 
-	 * int found = 0; for (UpsortableSet<?> upsortableSet : set) { if
-	 * (upsortableSet.remove(this)) { participatingSets[found++] =
-	 * upsortableSet; } }
-	 * 
-	 * // Update value this.$field = newDate;
-	 * 
-	 * // Add in the sets the element is participating for (int i = 0; i <
-	 * found; i++) { participatingSets[i].add(this); } } catch (Exception e) {
-	 * e.printStackTrace(); } // method end
-	 */
-	// @formatter:on
-	
+		/**
+		 * // Fail fast if (this.date == newDate) { return; } // Get the list of registered set DONE 
+		 * 
+		 * try {
+		 * 
+		 * 		final String fname = this.getClass().getDeclaredField("foo").getName(); DONE
+		 * 
+		 * 		Set<UpsortableSet> set = UpsortableSets.getGlobalUpsortable().get(this.getClass().getName() + "." + fname);
+		 * 
+		 * 		UpsortableSet[] participatingSets = new UpsortableSet[set.size()];
+		 * 
+		 * 		int found = 0;
+		 * 		for (UpsortableSet<?> upsortableSet : set) {
+		 * 				if (upsortableSet.remove(this)) {
+		 * 					participatingSets[found++] = upsortableSet;
+		 * 		 	}
+		 * 		} 
+		 * 
+		 * 		// Update value
+		 * 		this.$field = newDate;
+		 * 
+		 * 		// Add in the sets the element is participating
+		 * 		for (int i = 0; i < found; i++) {
+		 *  		participatingSets[i].add(this);
+		 * 		}
+		 * } catch (Exception e) {
+		 * 		e.printStackTrace();
+		 * } // method end
+		 */
+		// @formatter:on
 }
