@@ -65,7 +65,6 @@ import org.eclipse.jdt.internal.compiler.ast.TrueLiteral;
 import org.eclipse.jdt.internal.compiler.ast.TryStatement;
 import org.eclipse.jdt.internal.compiler.ast.TypeDeclaration;
 import org.eclipse.jdt.internal.compiler.ast.TypeReference;
-import org.eclipse.jdt.internal.compiler.ast.UnaryExpression;
 import org.eclipse.jdt.internal.compiler.ast.WhileStatement;
 import org.eclipse.jdt.internal.compiler.classfmt.ClassFileConstants;
 import org.eclipse.jdt.internal.compiler.lookup.TypeIds;
@@ -515,26 +514,28 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 			remove.receiver= new SingleNameReference("upsortableSet".toCharArray(), p);
 			remove.selector = "get".toCharArray();
 			remove.arguments = new Expression[] {new ThisReference(pS, pE)};
-			//Array ref
-			SingleNameReference expression = new SingleNameReference("found".toCharArray(), p);
-			UnaryExpression iPlusPlus = new UnaryExpression(expression, OperatorIds.MINUS_MINUS);
-			SingleNameReference arrayRef = new SingleNameReference("participatingSets".toCharArray(), p);
-			ArrayReference arrayReference = new ArrayReference(arrayRef, iPlusPlus);
-			arrayReference.receiver =  new SingleNameReference("upsortableSet".toCharArray(), p);
+			
 			
 			//Inside the IF
 			Block block = new Block(0);
 			 SingleNameReference foundL = new SingleNameReference("found".toCharArray(), p);
 			 SingleNameReference foundR = new SingleNameReference("found".toCharArray(), p);
-			 //BinaryExpression plusOne = new Bin
+			 BinaryExpression plusOne = new BinaryExpression(foundR,  makeIntLiteral("0".toCharArray(), source), OperatorIds.PLUS);
+			 Assignment as = new Assignment(foundL, plusOne, pE);
+			//Array ref
+			SingleNameReference expression = new SingleNameReference("found".toCharArray(), p);
+			SingleNameReference arrayRef = new SingleNameReference("participatingSets".toCharArray(), p);
+			ArrayReference arrayReference = new ArrayReference(arrayRef, expression);
+			arrayReference.receiver =  new SingleNameReference("upsortableSet".toCharArray(), p);
+			block.sourceStart=pS;block.sourceEnd=pE;
+			block.statements = new Statement[]{as,arrayReference};
 			 
 			//IF
-			ifstmt = new IfStatement(remove, arrayReference, pS, pE); //FIXME replace found by 'participating[....
+			ifstmt = new IfStatement(remove, block, pS, pE); //FIXME replace found by 'participating[....
 			
 			foreach.action=ifstmt;
 		}
-		
-		
+				
 		
 		/**
 		 * int i = 0;
@@ -588,6 +589,7 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 
 			
 		}
+
 		TryStatement tryStatement = new TryStatement();
 		setGeneratedBy(tryStatement, source);
 		tryStatement.tryBlock = new Block(0);
