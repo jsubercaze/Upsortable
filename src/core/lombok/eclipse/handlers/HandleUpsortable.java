@@ -371,7 +371,7 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 		/*
 		 * Set<UpsortableSet> set =
 		 * UpsortableSets.getGlobalUpsortable().get(this.getClass().getName() +
-		 * "." + fname);
+		 * "." + fname).get();
 		 */
 		LocalDeclaration theSet = new LocalDeclaration("set".toCharArray(), pS, pE);
 		{
@@ -412,6 +412,9 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 			/******
 			 * END this.getClass().getName() + "." + field.getName())
 			 ******/
+		
+			
+			
 			
 			/****** UpsortableSets.getGlobalUpsortable().get( ******/
 			NameReference upsortableSetsClass = HandleToString.generateQualifiedNameRef(source, "lombok".toCharArray(), "UpsortableSets".toCharArray());
@@ -431,7 +434,13 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 			lastGet.receiver = getGlobalUpsortable;
 			lastGet.selector = "get".toCharArray();
 			lastGet.arguments = new Expression[] {current};
-			
+			//Dereference the weak ref
+			MessageSend getRef = new MessageSend();
+			getRef.sourceStart = pS;
+			getRef.sourceEnd = pE;
+			setGeneratedBy(getName, source);
+			getRef.receiver = lastGet;
+			getRef.selector = "get".toCharArray();
 			/****** END UpsortableSets.getGlobalUpsortable().get() ******/
 			
 			// Left side
@@ -441,6 +450,7 @@ import lombok.eclipse.handlers.EclipseHandlerUtil.FieldAccess;
 			theSet.type = pstr;
 			
 			theSet.initialization = lastGet;
+			
 			
 		}
 		/*

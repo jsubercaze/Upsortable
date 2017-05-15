@@ -2,6 +2,7 @@ package lombok;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+import java.lang.ref.WeakReference;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.Collections;
@@ -41,7 +42,7 @@ import javassist.bytecode.InstructionPrinter;
 	 * <code> Class -> Fields -> Sets where they take part into comparator</code>
 	 */
 	
-	public final static Map<String, Set<UpsortableSet>> GLOBAL_UPSORTABLE = new HashMap<String, Set<UpsortableSet>>();
+	public final static Map<String, WeakReference<Set<UpsortableSet>>> GLOBAL_UPSORTABLE = new HashMap<String, WeakReference<Set<UpsortableSet>>>();
 	
 	public static <E extends UpsortableValue> UpsortableSet<E> newUpsortableTreeSet(Comparator<? super E> comparator) {
 		return new UpsortableTreeSet<E>(comparator);
@@ -51,11 +52,11 @@ import javassist.bytecode.InstructionPrinter;
 		return new UpsortableConcurrentSkipListSet<E>(comparator);
 	}
 	
-	public static Map<String, Set<UpsortableSet>> getGlobalUpsortable() {
+	public static Map<String, WeakReference<Set<UpsortableSet>>> getGlobalUpsortable() {
 		return GLOBAL_UPSORTABLE;
 	}
 	
-	static synchronized void init(Comparator<?> comparator, UpsortableSet<?> upsortableSet) {
+	@SuppressWarnings("unchecked") static synchronized void init(Comparator<?> comparator, UpsortableSet<?> upsortableSet) {
 		
 		try {
 			
@@ -84,8 +85,9 @@ import javassist.bytecode.InstructionPrinter;
 				if (line.contains("getfield")) {
 					String val = line.split(" Field ", 2)[1].split("\\(", 2)[0];
 					Set<UpsortableSet> set = null;
-					if ((set = GLOBAL_UPSORTABLE.get(val)) != null) {
-						set.add(upsortableSet);
+					WeakReference<Set<UpsortableSet>> ref;
+					if ((ref = GLOBAL_UPSORTABLE.get(val)) != null) {
+						ref.get().add(upsortableSet);
 					} else {
 						// Provide synchronized set for thread safety
 						// Even if this method is synchronized, it requires set
@@ -95,7 +97,7 @@ import javassist.bytecode.InstructionPrinter;
 						set = new HashSet<UpsortableSet>();
 						set = Collections.synchronizedSet(set);
 						set.add(upsortableSet);
-						GLOBAL_UPSORTABLE.put(val, set);
+						GLOBAL_UPSORTABLE.put(val, new WeakReference(set));
 						
 					}
 				}
